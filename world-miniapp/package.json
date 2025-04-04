@@ -10,13 +10,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@types/node": "20",
+    "@hugeicons/react": "^1.0.5",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@tailwindcss/vite": "^4.1.2",
+    "@types/node": "^22.14.0",
+    "@worldcoin/mini-apps-ui-kit-react": "^0.0.8",
     "@worldcoin/minikit-js": "1.1.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "eruda": "^3.3.0",
+    "lucide-react": "^0.487.0",
     "next-auth": "^4.24.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.1.0",
+    "tailwindcss-animate": "^1.0.7",
     "viem": "^2.25.0"
   },
   "devDependencies": {
