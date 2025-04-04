@@ -1,3 +1,0 @@
-[submodule "blockchain/TrustTag-contract/lib/openzeppelin-contracts"]
-	path = blockchain/TrustTag-contract/lib/openzeppelin-contracts
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts
