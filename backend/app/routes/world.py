@@ -4,7 +4,7 @@ import time, re
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-router = APIRouter(prefix="/api/test", tags=["scheduler"])
+router = APIRouter(prefix="/api", tags=["scheduler"])
 
 # In-memory storage for the nonce (for demo purposes only)
 NONCE_STORAGE = {}
