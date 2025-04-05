@@ -9,6 +9,7 @@ import httpx
 from typing import List, Dict
 from app.config import TEE_SERVICE_URL
 from app.db.mongodb import get_database
+from app.config import TEE_CLIENT_URL
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class TeeClient:
         json_bytes = io.BytesIO(json.dumps(payload_dict).encode("utf-8"))
 
         # TEE endpoints
-        TEE_BASE_URL = "https://1eea-2001-b011-3813-111f-3d7d-4343-e8c4-d91.ngrok-free.app"
+        TEE_BASE_URL = TEE_CLIENT_URL
         upload_url = f"{TEE_BASE_URL}/upload"
         vote_url = f"{TEE_BASE_URL}/vote"
 
