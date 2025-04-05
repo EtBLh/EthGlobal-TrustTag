@@ -50,9 +50,10 @@ export const createProposal = async (target: string, malicious: boolean, descrip
   });
 
   if (finalPayload.status === "success") {
-    return finalPayload.transaction_id;
+    return { transaction_id: finalPayload.transaction_id, proposalId };
   } else {
     console.error("Proposal creation failed:", finalPayload);
+    return null;
   }
 };
 
@@ -85,6 +86,7 @@ export const commitVote = async (proposalId: string, vote: boolean, yes_predicti
     return finalPayload.transaction_id;
   } else {
     console.error("Commit vote failed:", finalPayload);
+    return null;
   }
 };
 
@@ -104,5 +106,6 @@ export const claimReward = async (proposalId: string) => {
     return finalPayload.transaction_id;
   } else {
     console.error("Claim reward failed:", finalPayload);
+    return null;
   }
 };
