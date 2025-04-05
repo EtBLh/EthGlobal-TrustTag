@@ -2,21 +2,21 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 import uuid
-from web3 import Web3  # For checksum conversion
+from web3 import Web3
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
-from app.services.smart_contract_client import VoteContract  # Use the VoteContract class
 from app.services.smart_contract_client import w3
 
 router = APIRouter(prefix="/api", tags=["proposals"])
 
 class ProposeRequest(BaseModel):
     address: str
-    tag: str               # Description in contract
+    tag: str
     proof: str
     malicious: bool
-    verifyPayload: dict    # Already verified by middleware
+    verifyPayload: dict
+    signed_txn: str | None = None  # Optional signed transaction
 
 class ProposeResponse(BaseModel):
     message: str
@@ -41,21 +41,24 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
 
     try:
         target_address = Web3.to_checksum_address(req.address)
-    except Exception as e:
+    except Exception:
         raise HTTPException(400, f"Invalid address format: {req.address}")
 
-    try:
-        signed_txn_bytes = bytes.fromhex(req.signed_txn.replace('0x', ''))
-        tx_hash = w3.eth.send_raw_transaction(signed_txn_bytes)
-        tx_hex = tx_hash.hex()
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-        if receipt.status != 1:
-            raise RuntimeError(f"Transaction {tx_hex} failed: {receipt}")
+    tx_hex = None
 
-    except Exception as e:
-        from traceback import format_exc
-        print(format_exc())
-        raise HTTPException(500, f"Transaction submission failed: {e}")
+    # Only submit the signed transaction if provided
+    if req.signed_txn:
+        try:
+            signed_txn_bytes = bytes.fromhex(req.signed_txn.replace('0x', ''))
+            tx_hash = w3.eth.send_raw_transaction(signed_txn_bytes)
+            tx_hex = tx_hash.hex()
+            receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+            if receipt.status != 1:
+                raise RuntimeError(f"Transaction {tx_hex} failed: {receipt}")
+        except Exception as e:
+            from traceback import format_exc
+            print(format_exc())
+            raise HTTPException(500, f"Transaction submission failed: {e}")
 
     coll: Collection = db["proposals"]
     await coll.insert_one({
@@ -75,7 +78,7 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
 
 @router.get("/propose/list", response_model=ProposalListResponse)
 async def list_proposals(db=Depends(get_database)):
-    docs = await db["proposals"].find({"phase": "Commit"}).to_list(length=100)
+    docs = await db["proposals"].find().to_list(length=100)
     items = [
         ProposalListItem(
             id=d["_id"],

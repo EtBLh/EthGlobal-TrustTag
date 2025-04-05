@@ -9,7 +9,7 @@ forge install OpenZeppelin/openzeppelin-contracts
 forge build
 
 
-
 TODO
-test tee
-test rewards
+test tee: 用假資料
+test rewards: 用假資料
+前端串

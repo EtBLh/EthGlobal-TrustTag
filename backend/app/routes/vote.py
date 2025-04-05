@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api", tags=["votes"])
 
 class SignedVoteRequest(BaseModel):
     proposalId: str
-    signed_txn: str
+    signed_txn: str | None = None  # Optional signed transaction
     vote: bool
     prediction: int
     salt: str
@@ -24,22 +24,29 @@ class VoteResponse(BaseModel):
 
 @router.post("/vote", response_model=VoteResponse)
 async def cast_vote(req: SignedVoteRequest, db=Depends(get_database)):
-    try:
-        # Send the signed transaction directly to the blockchain
-        tx_hash = w3.eth.send_raw_transaction(bytes.fromhex(req.signed_txn[2:] if req.signed_txn.startswith('0x') else req.signed_txn))
-        tx_hex = tx_hash.hex()
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+    tx_hex = None
 
-        if receipt.status != 1:
-            raise HTTPException(500, f"Transaction {tx_hex} failed: {receipt}")
+    # Only submit signed_txn if provided
+    if req.signed_txn:
+        try:
+            tx_hash = w3.eth.send_raw_transaction(
+                bytes.fromhex(req.signed_txn[2:] if req.signed_txn.startswith('0x') else req.signed_txn)
+            )
+            tx_hex = tx_hash.hex()
+            receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
 
-    except Exception as e:
-        from traceback import format_exc
-        print(format_exc())
-        raise HTTPException(500, f"Contract call failed: {e}")
+            if receipt.status != 1:
+                raise HTTPException(500, f"Transaction {tx_hex} failed: {receipt}")
 
+        except Exception as e:
+            from traceback import format_exc
+            print(format_exc())
+            raise HTTPException(500, f"Contract call failed: {e}")
+
+    # Record the vote in the database regardless of signed_txn presence
     coll: Collection = db["votes"]
     record_id = str(uuid.uuid4())
+
     await coll.insert_one({
         "_id": record_id,
         "proposal_id": req.proposalId,

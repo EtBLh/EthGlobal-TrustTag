@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(WorldIDMiddleware)
+# app.add_middleware(WorldIDMiddleware)
 
 # Global background task handle
 background_task = None
@@ -43,7 +43,7 @@ async def cronjob():
 async def on_startup():
     await connect_to_mongo()
     global background_task
-    # background_task = asyncio.create_task(cronjob())
+    background_task = asyncio.create_task(cronjob())
     logger.info("Startup complete — background scheduler started.")
 
 @app.on_event("shutdown")

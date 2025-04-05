@@ -24,7 +24,7 @@ class RewardsListResponse(BaseModel):
     list: list[dict]
 
 
-@router.get("/rewards", response_model=RewardsListResponse)
+@router.post("/rewards", response_model=RewardsListResponse)
 async def get_rewards(q: RewardsQuery, db=Depends(get_database)):
     docs = await db["rewards"].find({"address": q.address}).to_list(length=100)
     return RewardsListResponse(list=docs)
