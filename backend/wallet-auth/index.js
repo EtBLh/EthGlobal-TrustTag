@@ -1,9 +1,8 @@
 import express from 'express';
-import { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import cors from 'cors';
-import { MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
+import { verifySiweMessage } from '@worldcoin/minikit-js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,8 +15,8 @@ app.use(cors({
   credentials: true
 }));
 
-// Define handlers separately with explicit return types
-const getNonce = (req: Request, res: Response): void => {
+// Define handlers
+const getNonce = (req, res) => {
   try {
     // Generate nonce
     const nonce = crypto.randomUUID().replace(/-/g, "");
@@ -37,12 +36,9 @@ const getNonce = (req: Request, res: Response): void => {
   }
 };
 
-const completeSiwe = async (req: Request, res: Response): Promise<void> => {
+const completeSiwe = async (req, res) => {
   try {
-    const { payload, nonce } = req.body as {
-      payload: MiniAppWalletAuthSuccessPayload;
-      nonce: string;
-    };
+    const { payload, nonce } = req.body;
     
     // Check nonce in cookie
     if (nonce !== req.cookies.siwe) {
@@ -55,10 +51,6 @@ const completeSiwe = async (req: Request, res: Response): Promise<void> => {
     }
     
     try {
-      // Import the verification function directly
-      // Don't use dynamic import here since we're already importing the type
-      const { verifySiweMessage } = require('@worldcoin/minikit-js');
-      
       // Verify SIWE message
       const validMessage = await verifySiweMessage(payload, nonce);
       
@@ -71,7 +63,7 @@ const completeSiwe = async (req: Request, res: Response): Promise<void> => {
         isValid: validMessage.isValid,
         address: validMessage.siweMessageData.address
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('SIWE verification error:', error);
       res.status(400).json({
         status: 'error',
@@ -79,7 +71,7 @@ const completeSiwe = async (req: Request, res: Response): Promise<void> => {
         message: error.message
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in complete-siwe endpoint:', error);
     res.status(400).json({
       status: 'error',
@@ -89,9 +81,9 @@ const completeSiwe = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// Register routes with the defined handlers
-app.get('/nonce', getNonce);
-app.post('/complete-siwe', completeSiwe);
+// Register routes
+app.get('/api/nonce', getNonce);
+app.post('/api/complete-siwe', completeSiwe);
 
 // Start the server
 app.listen(PORT, () => {
