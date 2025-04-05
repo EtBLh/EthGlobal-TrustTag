@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
+import uuid
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
@@ -39,15 +40,25 @@ async def claim_rewards(req: ClaimRequest, db=Depends(get_database)):
     if not docs:
         raise HTTPException(404, "No rewards to claim")
 
-    proposal_ids = [d["_id"] for d in docs]
-    tx_hash = await call_contract("claimReward", {
-        "address": req.address,
-        "proposalIds": proposal_ids
-    })
+    # Claim each reward individually
+    tx_hashes = {}
+    for doc in docs:
+        proposal_id = doc["_id"]
+        try:
+            # Call the contract for each reward proposal separately
+            tx_hash = await call_contract("claimReward", {
+                "address": req.address,
+                "proposalId": proposal_id
+            })
+        except Exception as e:
+            raise HTTPException(500, f"Contract call failed for proposal {proposal_id}: {e}")
 
-    await db["rewards"].update_many(
-        {"_id": {"$in": proposal_ids}},
-        {"$set": {"tx_hash": tx_hash, "claimed_at": datetime.utcnow()}}
-    )
+        tx_hashes[proposal_id] = tx_hash
 
-    return {"tx_hash": tx_hash}
+        # Update the reward document as claimed
+        await db["rewards"].update_one(
+            {"_id": proposal_id},
+            {"$set": {"tx_hash": tx_hash, "claimed_at": datetime.now(timezone.utc)}}
+        )
+
+    return {"tx_hashes": tx_hashes}

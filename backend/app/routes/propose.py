@@ -1,6 +1,8 @@
+# backend/app/routes/propose.py
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 
 from app.db.mongodb import get_database
@@ -29,6 +31,7 @@ class ProposalListItem(BaseModel):
     tag: str
     malicious: bool
     deadline: datetime
+    phase: str             # new field
 
 
 class ProposalListResponse(BaseModel):
@@ -38,7 +41,7 @@ class ProposalListResponse(BaseModel):
 @router.post("/propose", response_model=ProposeResponse)
 async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     proposal_id = str(uuid.uuid4())
-    deadline = datetime.utcnow() + timedelta(hours=24)
+    deadline = datetime.now(timezone.utc) + timedelta(hours=24)
 
     tx_req = {
         "proposalId": proposal_id,
@@ -60,9 +63,10 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
         "description": req.tag,
         "malicious": req.malicious,
         "deadline": deadline,
+        "phase": "Commit",                  # initialize phase
         "tx_hash": tx_hash,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
     })
 
     return ProposeResponse(message="success", hash=tx_hash)
@@ -70,7 +74,7 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
 
 @router.get("/propose/list", response_model=ProposalListResponse)
 async def list_proposals(db=Depends(get_database)):
-    docs = await db["proposals"].find().to_list(length=100)
+    docs = await db["proposals"].find({"phase": "Commit"}).to_list(length=100)
     items = [
         ProposalListItem(
             _id=d["_id"],
@@ -78,6 +82,7 @@ async def list_proposals(db=Depends(get_database)):
             tag=d["description"],
             malicious=d["malicious"],
             deadline=d["deadline"],
+            phase=d.get("phase", "Unknown")
         )
         for d in docs
     ]

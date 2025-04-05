@@ -66,14 +66,15 @@ async def call_contract(method: str, args: Dict[str, Any]) -> str:
         abi=label_contract_abi,
     )
     fn = getattr(vote_contract.functions, method)
+    gas_estimate = fn(**args).estimate_gas({"from": w3.eth.default_account})
     txn = fn(**args).build_transaction({
         "from": w3.eth.default_account,
         "nonce": w3.eth.get_transaction_count(w3.eth.default_account),
-        "gas": 500_000,
+        "gas": int(gas_estimate * 1.2),     # add a 20% buffer
         "gasPrice": w3.eth.gas_price,
     })
 
-    private_key = os.getenv("BACKEND_WALLET_PRIVATE_KEY")
+    private_key = BACKEND_WALLET_PRIVATE_KEY
     if not private_key:
         raise RuntimeError("BACKEND_WALLET_PRIVATE_KEY not set")
 

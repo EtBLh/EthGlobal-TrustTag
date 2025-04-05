@@ -1,3 +1,7 @@
+1. TEST
+2. 部署
+
+
 pip install -r requirements.txt
 
 
