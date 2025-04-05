@@ -74,7 +74,8 @@ async def finalize_reward_job():
 
         # 2) compute rewards via TEE
         try:
-            tee_results = await TeeClient.compute_rewards(proposal_id, voters)
+            # tee_results = await TeeClient.compute_rewards(proposal_id, voters)
+            tee_results = await TeeClient.compute_rewards_op_tee(proposal_id, voters)
             # tee_results: List[{"address": str, "score": int}]
         except Exception as e:
             logger.error(f"finalize_reward_job: compute_rewards failed for {proposal_id}: {e}")
