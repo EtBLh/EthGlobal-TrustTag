@@ -39,7 +39,7 @@ export const createProposal = async (target: string, malicious: boolean, descrip
   const proposalId = crypto.randomUUID(); // Generate a random UUID for this vote
   const deadline = Math.floor(Date.now() / 1000) + (3 * 24 * 60 * 60); // Current time in seconds + 3 days in seconds
   const tx = {
-    address: (process.env.VOTE_CONTRACT_ADDRESS) as string,
+    address: import.meta.env.VITE_VOTE_CON_ADDR,
     abi: voteAbi,
     functionName: "createProposal",
     args: [proposalId, target, malicious, description, deadline]
@@ -72,7 +72,7 @@ export const commitVote = async (proposalId: string, vote: boolean, yes_predicti
 
   // Note: The function is missing the proposalId parameter
   const tx = {
-    address: (process.env.VOTE_CONTRACT_ADDRESS) as string,
+    address: (process.env.VITE_VOTE_CON_ADDR) as string,
     abi: voteAbi,
     functionName: "commitVote",
     args: [proposalId, voteHash]

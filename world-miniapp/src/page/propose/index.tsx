@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge"
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { createProposal } from "@/web3";
+import { ISuccessResult, MiniKit, VerificationLevel, VerifyCommandInput } from "@worldcoin/minikit-js";
 
 const SelectOption = (props: {
     title: string,
@@ -155,7 +157,49 @@ const Select = (props: SelectProps) => {
 
 const ProposePage = () => {
     const [tag, setTag] = useState('normal_user');
+    const [addr, setAddr] = useState('');
+    const [proof, setProof] = useState('');
     const [isMalicious, setMalicious] = useState<boolean | undefined>(false);
+
+    const onSubmit = async () => {
+        const verifyPayload: VerifyCommandInput = {
+            action: 'propose', // This is your action ID from the Developer Portal
+            signal: addr, // Optional additional data
+            verification_level: VerificationLevel.Device, // Orb | Device
+        }
+        const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
+        if (finalPayload.status === 'error') {
+			return console.log('Error payload', finalPayload)
+		}
+        await fetch(`${import.meta.env.VITE_API_URL}api/verify`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+                payload: finalPayload as ISuccessResult, // Parses only the fields we need to verify
+                action: 'propose',
+                signal: addr, // Optional
+		    })
+        });
+        const id = await createProposal(addr, Boolean(isMalicious), tag);
+        if (id === null) {
+            console.log('id === null')
+            return;
+        }
+        await fetch(`${import.meta.env.VITE_API_URL}api/propose`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                address: addr,
+                tag: tag,
+                proof: proof,
+                malicious: Boolean(isMalicious)
+            })
+        })
+    }
 
     return (
         <main className="flex flex-col relative flex-1">
@@ -176,16 +220,14 @@ const ProposePage = () => {
                 </div>
                 <div>
                     <span className="text-indigo-100 text-sm">Address</span>
-                    <Input id="address" placeholder="0x123456...098765" className="h-[48px] border-[2px]" />
+                    <Input id="address" placeholder="0x123456...098765" className="h-[48px] border-[2px]" value={addr} onChange={(e) => setAddr(e.target.value)}/>
                 </div>
                 <div>
                     <span className="text-indigo-100 text-sm">Proof</span>
-                    <Input id="proof" placeholder="https://etherscan.io/tx/0x7f5fb62.." className="h-[48px] border-[2px]" />
+                    <Input id="proof" placeholder="https://etherscan.io/tx/0x7f5fb62.." className="h-[48px] border-[2px]" value={proof} onChange={(e) => setProof(e.target.value)}/>
                 </div>
             </section>
-            <Button className="bg-indigo-500 mx-2 mb-2 rounded-full">Submit</Button>
-
-
+            <Button className="bg-indigo-500 mx-2 mb-2 rounded-full" onClick={onSubmit}>Submit</Button>
         </main>
     )
 }
