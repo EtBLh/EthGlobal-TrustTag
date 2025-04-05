@@ -15,7 +15,7 @@ class ProposeRequest(BaseModel):
     tag: str
     proof: str
     malicious: bool
-    verifyPayload: dict
+    # verifyPayload: dict
     signed_txn: str | None = None  # Optional signed transaction
 
 class ProposeResponse(BaseModel):

@@ -15,7 +15,7 @@ class SignedVoteRequest(BaseModel):
     vote: bool
     prediction: int
     salt: str
-    verifyPayload: dict  # Already verified by middleware
+    # verifyPayload: dict  # Already verified by middleware
 
 class VoteResponse(BaseModel):
     _id: str
