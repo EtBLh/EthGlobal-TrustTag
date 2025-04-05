@@ -1,14 +1,10 @@
-# backend/app/jobs/scheduler.py
-
 import logging
 from datetime import datetime, timezone
 from typing import List
 
 from pymongo.collection import Collection
-from web3 import Web3
-
 from app.db.mongodb import get_database
-from app.services.smart_contract_client import call_contract
+from app.services.smart_contract_client import VoteContract
 from app.services.tee_client import TeeClient
 
 logger = logging.getLogger(__name__)
@@ -33,7 +29,7 @@ async def start_reveal_phase_job():
         reveal_deadline = int((now.timestamp() + 3600))
 
         try:
-            tx_hash = await call_contract("startRevealPhase", {
+            tx_hash = await VoteContract.call_contract("startRevealPhase", {
                 "proposalId": proposal_id,
                 "deadline": reveal_deadline
             })
@@ -50,7 +46,6 @@ async def start_reveal_phase_job():
             logger.info(f"start_reveal_phase_job: proposal={proposal_id} tx={tx_hash}")
         except Exception as e:
             logger.error(f"start_reveal_phase_job failed for {proposal_id}: {e}")
-
 
 async def finalize_reward_job():
     """
@@ -70,9 +65,9 @@ async def finalize_reward_job():
     for p in to_finalize:
         proposal_id = p["_id"]
 
-        # 1) fetch voters from chain
+        # 1) fetch voters from chain using a view call
         try:
-            voters: List[str] = await call_contract("getProposalVoters", {"proposalId": proposal_id})
+            voters: List[str] = await VoteContract.call_view("getProposalVoters", {"proposalId": proposal_id})
         except Exception as e:
             logger.error(f"finalize_reward_job: getProposalVoters failed for {proposal_id}: {e}")
             continue
@@ -86,11 +81,11 @@ async def finalize_reward_job():
             logger.error(f"finalize_reward_job: compute_rewards failed for {proposal_id}: {e}")
             continue
 
-        # 3) call finalize on-chain
+        # 3) call finalize on-chain using the vote contract
         voter_list = [r["address"] for r in tee_results]
         reward_list = [r["score"] for r in tee_results]
         try:
-            tx_hash = await call_contract("finalize", {
+            tx_hash = await VoteContract.call_contract("finalize", {
                 "proposalId": proposal_id,
                 "voterList": voter_list,
                 "rewardList": reward_list

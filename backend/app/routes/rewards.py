@@ -5,7 +5,7 @@ import uuid
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
-from app.services.smart_contract_client import call_contract
+from app.services.smart_contract_client import VoteContract  # Use the new VoteContract class
 
 router = APIRouter(prefix="/api", tags=["rewards"])
 
@@ -45,9 +45,9 @@ async def claim_rewards(req: ClaimRequest, db=Depends(get_database)):
     for doc in docs:
         proposal_id = doc["_id"]
         try:
-            # Call the contract for each reward proposal separately
-            tx_hash = await call_contract("claimReward", {
-                "address": req.address,
+            # Call the contract for each reward proposal separately using the new VoteContract class.
+            # The claimReward function expects a single argument: proposalId.
+            tx_hash = await VoteContract.call_contract("claimReward", {
                 "proposalId": proposal_id
             })
         except Exception as e:
