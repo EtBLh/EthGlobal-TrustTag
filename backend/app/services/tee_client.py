@@ -2,11 +2,16 @@
 
 import math
 import logging
+import os
+import io
+import json
+import httpx
 from typing import List, Dict
 from app.config import TEE_SERVICE_URL
 from app.db.mongodb import get_database
 
 logger = logging.getLogger(__name__)
+
 
 class TeeClient:
     @staticmethod
@@ -96,6 +101,110 @@ class TeeClient:
         logger.info(f"Computed rewards for proposal {proposal_id} based on {n} votes")
         return rewards
     
+    @staticmethod
+    async def compute_rewards_op_tee(proposal_id: str, voters: List[str]) -> List[Dict]:
+        """
+        Compute rewards for a given proposal and list of voters via an actual TEE service call.
+        *Without* storing the JSON on local disk, we build it in memory from DB data.
+
+        Steps:
+          1) Query DB for votes (matching `proposal_id` and `voters`).
+          2) Build an in-memory JSON object: {"votes": [...] }.
+          3) Upload that JSON to TEE /upload (multipart/form-data).
+          4) Call TEE /vote to compute final user_scores.
+          5) Parse and return a list [{"address": ..., "score": ...}].
+        """
+
+        # 1) Query the DB
+        db = await get_database()
+        votes_cursor = db["votes"].find({
+            "proposal_id": proposal_id,
+            "address": {"$in": voters}
+        })
+        votes = await votes_cursor.to_list(None)
+
+        if not votes:
+            logger.info(f"No votes found for proposal {proposal_id} among {voters}.")
+            return []
+
+        # 2) Build the JSON structure in memory
+        #    Adjust fields as needed based on how your DB columns map to the JSON schema.
+        #    We'll assume "vote" is stored as boolean in DB, and we want "yes"/"no" in JSON, etc.
+        payload_dict = {"votes": []}
+        for v in votes:
+            vote_str = "yes" if v["vote"] else "no"
+            payload_dict["votes"].append({
+                "user": v["address"],
+                "vote": vote_str,
+                "prediction_yes": float(v.get("prediction", 0.0)) / 100.0,
+                "prediction_no": (100 - float(v.get("prediction", 0.0))) / 100.0,
+            })
+
+        # Convert dict -> bytes for uploading
+        json_bytes = io.BytesIO(json.dumps(payload_dict).encode("utf-8"))
+
+        # TEE endpoints
+        TEE_BASE_URL = "https://1eea-2001-b011-3813-111f-3d7d-4343-e8c4-d91.ngrok-free.app"
+        upload_url = f"{TEE_BASE_URL}/upload"
+        vote_url = f"{TEE_BASE_URL}/vote"
+
+        # We’ll name our in-memory file "<proposal_id>.json"
+        # because the TEE might expect a ".json" extension.
+        file_name = f"{proposal_id}.json"
+
+        # 3) Use an async HTTP client to upload the in-memory JSON to TEE /upload
+        async with httpx.AsyncClient() as client:
+            try:
+                # Create a "file" field that references our JSON in memory
+                files = {
+                    "file": (file_name, json_bytes, "application/json")
+                }
+                # TEE expects a form field "filename" that ends with .json
+                data = {"filename": file_name}
+
+                resp = await client.post(upload_url, files=files, data=data)
+                resp.raise_for_status()
+                logger.info(f"Uploaded JSON to TEE /upload as '{file_name}'.")
+            except Exception as e:
+                logger.error(f"Failed to upload JSON to TEE: {e}")
+                return []
+
+            # 4) Call TEE /vote with the same filename
+            try:
+                payload = {"json_file_name": file_name}
+                resp = await client.post(vote_url, json=payload)
+                resp.raise_for_status()
+            except Exception as e:
+                logger.error(f"TEE /vote request failed for '{file_name}': {e}")
+                return []
+
+            # 5) Parse the TEE’s /vote response
+            #    Expected shape:
+            #    {
+            #      "result": {
+            #        "user_scores": { "0x001": 96, "0x002": 93, ... },
+            #        "signature": "...",
+            #      }
+            #    }
+            tee_response = resp.json()
+            result_obj = tee_response.get("result", {})
+            user_scores = result_obj.get("user_scores", {})
+
+            if not user_scores:
+                logger.warning(f"No 'user_scores' found in TEE response: {tee_response}")
+                return []
+
+            # Convert user_scores into final list of { "address": x, "score": y }
+            final_rewards = []
+            for address in voters:
+                score = user_scores.get(address, 0)
+                final_rewards.append({"address": address, "score": score})
+
+            return final_rewards
+        
+
+            
+
     '''
     @staticmethod
     async def compute_rewards(proposal_id: str, voters: List[str]) -> List[Dict]:
