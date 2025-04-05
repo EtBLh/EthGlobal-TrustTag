@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class TeeClient:
     @staticmethod
     async def compute_rewards(proposal_id: str, voters: List[str]) -> List[Dict]:
-        db = await get_database()
+        db = get_database()
         votes = await db["votes"].find({
             "proposal_id": proposal_id,
             "address": {"$in": voters}
@@ -70,7 +70,7 @@ class TeeClient:
     async def compute_rewards_op_tee(proposal_id: str, voters: List[str]) -> List[Dict]:
         logger.info(f"Starting compute_rewards_op_tee for proposal_id={proposal_id}, voters={voters}")
 
-        db = await get_database()
+        db = get_database()
         votes_cursor = db["votes"].find({
             "proposal_id": proposal_id,
             "address": {"$in": voters}
