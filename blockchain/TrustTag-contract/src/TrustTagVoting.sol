@@ -8,6 +8,10 @@ interface IProtocolToken {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }
 
+interface ITagStorage {
+    function updateLabel(bytes32 hashedAddress, string calldata description, bool malicious) external;
+}
+
 contract CommitRevealLabelVoting is Ownable {
     enum Phase { Commit, Reveal, Finished }
 
@@ -37,6 +41,7 @@ contract CommitRevealLabelVoting is Ownable {
     }
 
     IProtocolToken public token;
+    ITagStorage public tagStorage;
     mapping(string => Proposal) public proposals;      // 依照提案 ID 存放每個提案的詳細資訊
     mapping(address => uint256) public stakes;          // 記錄每個使用者目前已 stake 但尚未參與投票的餘額，可被用來再次投票或提案。
 
@@ -55,8 +60,9 @@ contract CommitRevealLabelVoting is Ownable {
     event ProposalFinalized(string proposalId, bool label);
     event RewardClaimed(string proposalId, address voter, uint256 amount);
 
-    constructor(address _token, address initialOwner) Ownable(initialOwner) {
+    constructor(address _token, address _tagStorage, address initialOwner) Ownable(initialOwner) {
         token = IProtocolToken(_token);
+        tagStorage = ITagStorage(_tagStorage);
     }
 
     // =============================
@@ -169,11 +175,13 @@ contract CommitRevealLabelVoting is Ownable {
             p.finalized = true;
             return;
         }
+
         bool winner = p.voteTally[true] >= p.voteTally[false];
         p.winningLabel = winner;
         p.phase = Phase.Finished;
         p.finalized = true;
         p.malicious = winner;
+
         for (uint i = 0; i < voterList.length; i++) {
             require(voterList[i] == p.voters[i], "Voter list mismatch");
             address voter = voterList[i];
@@ -197,6 +205,9 @@ contract CommitRevealLabelVoting is Ownable {
         } else {
             stakes[p.proposer] += STAKE_TO_PROPOSE;
         }
+
+        bytes32 hashedAddress = keccak256(abi.encodePacked(p.target));
+        tagStorage.updateLabel(hashedAddress, p.description, p.malicious);
 
         emit ProposalFinalized(proposalId, winner);
     }
