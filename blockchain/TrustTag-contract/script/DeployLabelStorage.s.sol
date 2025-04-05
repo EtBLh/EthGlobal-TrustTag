@@ -9,9 +9,7 @@ contract DeployLabelStorage is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        LabelStorage labelStorage = new LabelStorage(
-            vm.addr(deployerPrivateKey)
-        );
+        TagStorage labelStorage = new TagStorage(vm.addr(deployerPrivateKey));
 
         vm.stopBroadcast();
 
