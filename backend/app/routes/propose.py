@@ -24,7 +24,6 @@ class ProposeResponse(BaseModel):
 
 class ProposalListItem(BaseModel):
     id: str
-    _id: str
     address: str
     tag: str
     malicious: bool
