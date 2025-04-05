@@ -183,7 +183,7 @@ async def verify_siwe_message(payload, nonce, statement=None, request_id=None, r
 async def handle_siwe_auth(payload):
     try:
         # Get stored nonce from your database/cache
-        stored_nonce = "your-stored-nonce"
+        stored_nonce = NONCE_STORAGE.get("nonce")
         
         # Verify the SIWE message
         result = await verify_siwe_message(
