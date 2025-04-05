@@ -36,9 +36,12 @@ if not os.path.isfile(label_abi_path):
     raise FileNotFoundError(f"Label ABI not found at {label_abi_path}")
 
 with open(vote_abi_path, "r") as f:
-    vote_contract_abi = json.load(f)
+    vote_contract_data = json.load(f)
+    vote_contract_abi = vote_contract_data["abi"]
+
 with open(label_abi_path, "r") as f:
-    label_contract_abi = json.load(f)
+    label_contract_data = json.load(f)
+    label_contract_abi = label_contract_data["abi"]
 
 # ————————————————
 # Web3 Setup
@@ -46,25 +49,23 @@ with open(label_abi_path, "r") as f:
 w3 = Web3(Web3.HTTPProvider(BLOCKCHAIN_RPC_URL))
 w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
-# vote_contract = w3.eth.contract(
-#     address=Web3.to_checksum_address(VOTE_CONTRACT_ADDRESS),
-#     abi=vote_contract_abi,
-# )
-# label_contract = w3.eth.contract(
-#     address=Web3.to_checksum_address(LABEL_CONTRACT_ADDRESS),
-#     abi=label_contract_abi,
-# )
+# Set default account if not set
+if not w3.eth.default_account:
+    # Derive the account from the backend wallet private key
+    account = w3.eth.account.from_key(BACKEND_WALLET_PRIVATE_KEY)
+    w3.eth.default_account = Web3.to_checksum_address(account.address)
+    logger.info(f"Default account set to: {w3.eth.default_account}")
 
+vote_contract = w3.eth.contract(
+    address=Web3.to_checksum_address(VOTE_CONTRACT_ADDRESS),
+    abi=vote_contract_abi,
+)
+label_contract = w3.eth.contract(
+    address=Web3.to_checksum_address(LABEL_CONTRACT_ADDRESS),
+    abi=label_contract_abi,
+)
 
 async def call_contract(method: str, args: Dict[str, Any]) -> str:
-    vote_contract = w3.eth.contract(
-        address=Web3.to_checksum_address(VOTE_CONTRACT_ADDRESS),
-        abi=vote_contract_abi,
-    )
-    label_contract = w3.eth.contract(
-        address=Web3.to_checksum_address(LABEL_CONTRACT_ADDRESS),
-        abi=label_contract_abi,
-    )
     fn = getattr(vote_contract.functions, method)
     gas_estimate = fn(**args).estimate_gas({"from": w3.eth.default_account})
     txn = fn(**args).build_transaction({
