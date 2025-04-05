@@ -8,10 +8,11 @@ from app.services.worldchain import Worldchain
 
 logger = logging.getLogger(__name__)
 
+
 class WorldIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Only enforce on write operations
-        if request.method in ("POST", "PUT", "DELETE"):
+        # Enforce middleware only on specific routes
+        if request.method == "POST" and request.url.path in ("/api/propose", "/api/vote"):
             try:
                 body = await request.json()
             except Exception:
