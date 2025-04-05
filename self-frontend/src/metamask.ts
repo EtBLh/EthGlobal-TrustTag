@@ -112,6 +112,7 @@ export async function createProposal(target: string, malicious: boolean, descrip
       to: VOTE_CONTRACT_ADDRESS,
       from: currentAccount,
       data: data,
+      chainId: '0x12c1', // Chain ID 4801
     };
     
     // Send the transaction
@@ -188,6 +189,7 @@ export async function commitVote(proposalId: string, vote: boolean, yes_predicti
       to: VOTE_CONTRACT_ADDRESS,
       from: currentAccount,
       data: data,
+      chainId: '0x12c1', // Chain ID 4801
     };
     
     // Send the transaction
@@ -272,6 +274,7 @@ export async function revealVote(proposalId: string): Promise<{
       to: VOTE_CONTRACT_ADDRESS,
       from: currentAccount,
       data: data,
+      chainId: '0x12c1', // Chain ID 4801
     };
     
     // Send the transaction
