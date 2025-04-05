@@ -28,6 +28,7 @@ class ProposalListItem(BaseModel):
     address: str
     tag: str
     malicious: bool
+    proof: str
     deadline: datetime
     phase: str
 
@@ -88,7 +89,7 @@ async def list_proposals(db=Depends(get_database)):
             tag=d["description"],
             malicious=d["malicious"],
             deadline=d["deadline"],
-            proof=d["proof"],
+            proof=d.get("proof", ""),
             phase=d.get("phase", "Unknown")
         )
         for d in docs
