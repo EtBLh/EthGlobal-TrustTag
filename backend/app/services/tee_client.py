@@ -8,9 +8,9 @@ from typing import List, Dict
 from app.config import TEE_SERVICE_URL
 from app.db.mongodb import get_database
 from app.config import TEE_CLIENT_URL
-from app.utils import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
+
 
 class TeeClient:
     @staticmethod
@@ -76,7 +76,7 @@ class TeeClient:
             "address": {"$in": voters}
         })
         votes = await votes_cursor.to_list(None)
-        logger.info(f"Retrieved {len(votes)} votes for proposal {proposal_id}")
+
         if not votes:
             logger.info(f"No votes found for proposal {proposal_id} among {voters}.")
             return []
