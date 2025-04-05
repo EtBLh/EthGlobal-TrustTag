@@ -105,7 +105,7 @@ class TeeClient:
                     "file": (file_name, json_bytes, "application/json")
                 }
                 data = {"filename": file_name}
-
+                
                 logger.info(f"Uploading payload to TEE /upload: {file_name}")
                 resp = await client.post(upload_url, files=files, data=data)
                 resp.raise_for_status()

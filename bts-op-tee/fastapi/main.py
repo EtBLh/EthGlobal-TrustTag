@@ -52,9 +52,17 @@ def run_in_guest(command: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to run command in guest: {str(e)}")
 
+class VoteRequest(BaseModel):
+    json_file_name: str
+
+@app.post("/vote")
+def run_bts_voting(payload: VoteRequest):
+    json_file_name = payload.json_file_name
+
 # ====== API: 呼叫 BTS 計算並簽章 ======
 @app.post("/vote")
-def run_bts_voting(json_file_name: str):
+def run_bts_voting(payload: VoteRequest):
+    json_file_name = payload.json_file_name
     command = f"cat {json_file_name} | optee_example_bts_voting process_vote -"
     output = run_in_guest(command) + "}"
 
