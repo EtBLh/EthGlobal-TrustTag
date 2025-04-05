@@ -82,8 +82,7 @@ async def list_proposals(db=Depends(get_database)):
     docs = await db["proposals"].find().to_list(length=100)
     items = [
         ProposalListItem(
-            id=d["_id"],
-            _id=d["_id"],
+            id=str(d.get("id", d["_id"])),  # 自定義 ID 優先，否則 fallback 為 _id（轉字串）
             address=d["address"],
             tag=d.get("description", d.get("tag", "Unknown")),
             malicious=d["malicious"],
