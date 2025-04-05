@@ -67,6 +67,7 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
         "address": target_address,
         "description": req.tag,
         "malicious": req.malicious,
+        "proof": req.proof,
         "deadline": deadline,
         "phase": "Commit",
         "tx_hash": tx_hex,
@@ -87,6 +88,7 @@ async def list_proposals(db=Depends(get_database)):
             tag=d["description"],
             malicious=d["malicious"],
             deadline=d["deadline"],
+            proof=d["proof"],
             phase=d.get("phase", "Unknown")
         )
         for d in docs
