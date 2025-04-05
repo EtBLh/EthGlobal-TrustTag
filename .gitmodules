@@ -1,6 +1,7 @@
+[submodule "blockchain/TrustTag-contract/lib/openzeppelin-contracts"]
+	path = blockchain/TrustTag-contract/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "blockchain/TrustTag-contract/lib/forge-std"]
 	path = blockchain/TrustTag-contract/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+
