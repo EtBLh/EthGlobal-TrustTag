@@ -2,12 +2,13 @@ import os
 import httpx
 import logging
 from typing import Dict, Any
+from app.config import WORLDCOIN_APP_ID
 
 logger = logging.getLogger(__name__)
 
 class Worldchain:
     BASE_URL = "https://developer.worldcoin.org"
-    APP_ID = os.getenv("WORLDCOIN_APP_ID")  # must be set in your environment
+    APP_ID = WORLDCOIN_APP_ID  # must be set in your environment
     HEADERS = {
         "Content-Type": "application/json",
         "User-Agent": "YourAppName/1.0",

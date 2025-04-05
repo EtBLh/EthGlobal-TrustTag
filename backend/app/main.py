@@ -3,7 +3,6 @@ import logging
 
 from fastapi import FastAPI
 from app.db.mongodb import connect_to_mongo, close_mongo_connection
-from app.jobs.scheduler import start_reveal_phase_job, finalize_reward_job
 from app.routes.middleware import WorldIDMiddleware
 from app.routes.propose import router as propose_router
 from app.routes.vote import router as vote_router
@@ -18,6 +17,7 @@ app.add_middleware(WorldIDMiddleware)
 background_task = None
 
 async def cronjob():
+    from app.jobs.scheduler import start_reveal_phase_job, finalize_reward_job
     """Background task that runs every 3 seconds to drive the commit‑reveal‑finalize workflow."""
     while True:
         try:
@@ -36,7 +36,7 @@ async def on_startup():
     await connect_to_mongo()
     # Launch background scheduler
     global background_task
-    background_task = asyncio.create_task(cronjob())
+    # background_task = asyncio.create_task(cronjob())
     logger.info("Startup complete — background scheduler started.")
 
 

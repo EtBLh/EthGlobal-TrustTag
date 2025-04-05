@@ -1,6 +1,5 @@
 import logging
 import asyncio
-from app.models import Vote, TEEOutput
 from app.services import tee_client, smart_contract_client
 from app.db.mongodb import save_vote
 
