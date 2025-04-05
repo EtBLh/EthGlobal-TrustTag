@@ -16,7 +16,7 @@ async def main():
     ]
 
     print("Calling compute_rewards...")
-    rewards = await TeeClient.compute_rewards(proposal_id, voters)
+    rewards = await TeeClient.compute_rewards_op_tee(proposal_id, voters)
 
     print("\n✅ BTS Reward Output:")
     for r in rewards:
