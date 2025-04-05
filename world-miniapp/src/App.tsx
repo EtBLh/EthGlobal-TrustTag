@@ -1,19 +1,31 @@
-// import { PayBlock } from "./components/Pay";
-// import { VerifyBlock } from "./components/Verify";
+import { HashRouter, Route, Routes, useLocation } from "react-router";
+import SplashScreen from "./page";
+import HomePage from "./page/home";
+import VotePage from "./page/vote";
+import ProposePage from "./page/propose";
+import SearchPage from "./page/search";
+import PageWrapper from "./components/page-wrapper";
+import { AnimatePresence } from "framer-motion";
+import ClaimPage from "./page/claim";
 
-export default function App() {
+export function AnimatedRoutes() {
+  const location = useLocation()
   return (
-    <main className="flex min-h-screen flex-col bg-black p-1">
-      <header className='text-lg font-bold flex flex-row gap-1/2 items-baseline'>
-        {/* <Typography variant="heading" className='text-white'>TrustTag</Typography> */}
-        {/* <Typography variant="mono" className='text-white text-xl'>TAG</Typography>
-        <Typography variant="number" className='text-white'>12.32</Typography> */}
-      </header>
-      <div className='text-xl'>
-        
-      </div>
-      {/* <VerifyBlock />
-      <PayBlock /> */}
-    </main>
-  );
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route index element={<SplashScreen />} />
+          <Route path='/home' element={<PageWrapper variant="ltr"><HomePage /></PageWrapper>} />
+          <Route path='/vote' element={<PageWrapper variant="ltr"><VotePage /></PageWrapper>} />
+          <Route path='/search' element={<PageWrapper variant="ltr"><SearchPage /></PageWrapper>} />
+          <Route path='/propose' element={<PageWrapper variant="ltr"><ProposePage /></PageWrapper>} />
+          <Route path='/claim' element={<PageWrapper variant="ltr"><ClaimPage /></PageWrapper>} />
+        </Routes>
+      </AnimatePresence>
+  )
+}
+
+export default function () {
+  return <HashRouter>
+      <AnimatedRoutes/>
+  </HashRouter>
 }
