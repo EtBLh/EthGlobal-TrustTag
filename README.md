@@ -11,5 +11,4 @@ forge build
 
 TODO
 test tee: 用假資料
-test rewards: 用假資料
 前端串
