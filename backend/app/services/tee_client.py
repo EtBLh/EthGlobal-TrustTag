@@ -1,11 +1,10 @@
 import aiohttp
 import logging
-from app.models import Vote, TEEOutput, Reward
 from app.config import TEE_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
-async def call_tee(vote: Vote) -> TEEOutput:
+async def call_tee(vote):
     """
     Call the TEE service with a given vote and return the TEE output.
     For demonstration, this function simulates a TEE response.
