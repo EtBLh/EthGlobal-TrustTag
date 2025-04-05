@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 import uuid
+from web3 import Web3  # Import Web3 to use its to_checksum_address function
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
@@ -43,10 +44,16 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     proposal_id = str(uuid.uuid4())
     deadline = datetime.now(timezone.utc) + timedelta(hours=24)
 
+    # Convert the provided address to a checksummed address.
+    try:
+        target_address = Web3.to_checksum_address(req.address)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid address format: {req.address}")
+
     tx_req = {
         "proposalId": proposal_id,
         "deadline": int(deadline.timestamp()),
-        "target": req.address,
+        "target": target_address,  # Use the checksummed address
         "malicious": req.malicious,
         "description": req.tag,
     }
@@ -54,12 +61,15 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     try:
         tx_hash = await call_contract("createProposal", tx_req)
     except Exception as e:
+        from traceback import format_exc
+        # Log the error for debugging
+        print(format_exc())
         raise HTTPException(500, f"Contract call failed: {e}")
 
     coll: Collection = db["proposals"]
     await coll.insert_one({
         "_id": proposal_id,
-        "address": req.address,
+        "address": target_address,
         "description": req.tag,
         "malicious": req.malicious,
         "deadline": deadline,

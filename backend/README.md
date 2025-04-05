@@ -20,7 +20,7 @@ DB_SCHEMA
   "updated_at": "Date",
 }
 
-// 2) rewards collection
+// 2. rewards collection
 {
   "_id": "string",
   "address": "string",
@@ -28,5 +28,14 @@ DB_SCHEMA
   "amount": "number",
   "tx_hash": "string",       // on‐chain claim tx
   "claimed_at": "Date"
+}
+
+// 3. votes collection
+{
+  "_id": "string",
+  "address": "string",
+  "proposal_id": "string",
+  "vote": boolean
+  "prediction": yes的趴數, 0~100 
 }
 '''
