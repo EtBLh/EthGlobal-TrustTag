@@ -1,19 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel
+from datetime import datetime, timezone
 import uuid
-from web3 import Web3
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
-from app.services.smart_contract_client import VoteContract
+from app.services.smart_contract_client import VoteContract, w3
 
 router = APIRouter(prefix="/api", tags=["votes"])
 
-class VoteRequest(BaseModel):
+class SignedVoteRequest(BaseModel):
     proposalId: str
+    signed_txn: str
     vote: bool
-    prediction: int = Field(..., ge=0, le=100)
+    prediction: int
+    salt: str
     verifyPayload: dict  # Already verified by middleware
 
 class VoteResponse(BaseModel):
@@ -22,23 +23,19 @@ class VoteResponse(BaseModel):
     hash: str | None = None
 
 @router.post("/vote", response_model=VoteResponse)
-async def cast_vote(req: VoteRequest, db=Depends(get_database)):
-    # Generate a random salt (32 hex characters representing 16 bytes)
-    salt = uuid.uuid4().hex
-    salt_bytes = bytes.fromhex(salt)
-
-    # Compute keccak256(abi.encodePacked(...)) using web3.py.
-    # Do NOT convert the result to a hex string so it remains as raw bytes.
-    vote_hash = Web3.solidity_keccak(
-        ["bool", "uint256", "bytes16"],
-        [req.vote, req.prediction, salt_bytes]
-    )
-
-    # Prepare transaction request with raw vote_hash (bytes32 expected by the contract)
-    tx_req = {"proposalId": req.proposalId, "voteHash": vote_hash}
+async def cast_vote(req: SignedVoteRequest, db=Depends(get_database)):
     try:
-        tx_hash = await VoteContract.call_contract("commitVote", tx_req)
+        # Send the signed transaction directly to the blockchain
+        tx_hash = w3.eth.send_raw_transaction(bytes.fromhex(req.signed_txn[2:] if req.signed_txn.startswith('0x') else req.signed_txn))
+        tx_hex = tx_hash.hex()
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+
+        if receipt.status != 1:
+            raise HTTPException(500, f"Transaction {tx_hex} failed: {receipt}")
+
     except Exception as e:
+        from traceback import format_exc
+        print(format_exc())
         raise HTTPException(500, f"Contract call failed: {e}")
 
     coll: Collection = db["votes"]
@@ -48,9 +45,9 @@ async def cast_vote(req: VoteRequest, db=Depends(get_database)):
         "proposal_id": req.proposalId,
         "vote": req.vote,
         "prediction": req.prediction,
-        "salt": salt,
-        "tx_hash": tx_hash,
-        "created_at": datetime.utcnow(),
+        "salt": req.salt,
+        "tx_hash": tx_hex,
+        "created_at": datetime.now(timezone.utc),
     })
 
-    return VoteResponse(_id=record_id, message="success", hash=tx_hash)
+    return VoteResponse(_id=record_id, message="success", hash=tx_hex)

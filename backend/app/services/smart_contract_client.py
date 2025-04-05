@@ -76,7 +76,7 @@ class VoteContract:
         txn = fn(**args).build_transaction({
             "from": w3.eth.default_account,
             "nonce": w3.eth.get_transaction_count(w3.eth.default_account),
-            "gas": HARDCODED_GAS,  # hard-coded gas value
+            "gas": HARDCODED_GAS,
             "gasPrice": w3.eth.gas_price,
         })
 
@@ -85,7 +85,6 @@ class VoteContract:
             raise RuntimeError("BACKEND_WALLET_PRIVATE_KEY not set")
 
         signed = w3.eth.account.sign_transaction(txn, private_key=private_key)
-        # Note: use signed.raw_transaction (all lowercase) instead of rawTransaction.
         tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         tx_hex = tx_hash.hex()
         logger.info(f"Sent {method} tx: {tx_hex} args={args}")
@@ -94,8 +93,12 @@ class VoteContract:
             return w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
 
         receipt = await asyncio.get_event_loop().run_in_executor(None, _wait_receipt)
+
+
         if receipt.status != 1:
+            logger.error(f"Transaction {tx_hex} failed: {receipt}")
             raise RuntimeError(f"Transaction {tx_hex} failed: {receipt}")
+
         return tx_hex
 
 class LabelContract:

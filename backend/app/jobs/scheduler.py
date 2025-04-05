@@ -14,7 +14,7 @@ async def start_reveal_phase_job():
     Find proposals whose commit-deadline has passed and whose phase is still 'Commit'.
     For each, call the contract to start the reveal phase and set a new reveal-deadline.
     """
-    db = await get_database()
+    db = get_database()
     proposals: Collection = db["proposals"]
 
     now = datetime.now(timezone.utc)
@@ -52,7 +52,7 @@ async def finalize_reward_job():
     Find proposals whose reveal-deadline has passed and whose phase is 'Reveal'.
     For each, gather voters, compute rewards, call finalize on-chain, and persist rewards.
     """
-    db = await get_database()
+    db = get_database()
     proposals: Collection = db["proposals"]
     rewards: Collection = db["rewards"]
 

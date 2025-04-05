@@ -8,6 +8,8 @@ from datetime import datetime
 from web3 import Web3
 from eth_account.messages import encode_defunct
 
+from app.services.worldchain import Worldchain
+
 # Constants from TypeScript
 PREAMBLE = ' wants you to sign in with your Ethereum account:'
 URI_TAG = 'URI: '
@@ -200,7 +202,18 @@ async def handle_siwe_auth(payload):
     except ValueError as e:
         return {"success": False, "error": str(e)}
 
-router = APIRouter(prefix="/api", tags=["scheduler"])
+router = APIRouter(prefix="/api", tags=["world"])
+
+class VerifyPayload(BaseModel):
+    verifyPayload: dict
+
+# this api only calls the wo
+@router.post("/verify")
+async def verify(payload: VerifyPayload):
+    ok = await Worldchain.verify_worldid(payload.verifyPayload)
+    if not ok:
+        raise HTTPException(400, "WorldID verification failed")
+    return {"verified": True}
 
 # In-memory storage for the nonce (for demo purposes only)
 NONCE_STORAGE = {}

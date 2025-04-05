@@ -7,6 +7,7 @@ from web3 import Web3  # For checksum conversion
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
 from app.services.smart_contract_client import VoteContract  # Use the VoteContract class
+from app.services.smart_contract_client import w3
 
 router = APIRouter(prefix="/api", tags=["proposals"])
 
@@ -38,41 +39,39 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     proposal_id = str(uuid.uuid4())
     deadline = datetime.now(timezone.utc) + timedelta(hours=24)
 
-    # Convert the provided address to checksummed format.
     try:
         target_address = Web3.to_checksum_address(req.address)
     except Exception as e:
         raise HTTPException(400, f"Invalid address format: {req.address}")
 
-    tx_req = {
-        "proposalId": proposal_id,
-        "deadline": int(deadline.timestamp()),
-        "target": target_address,
-        "malicious": req.malicious,
-        "description": req.tag,
-    }
-
     try:
-        tx_hash = await VoteContract.call_contract("createProposal", tx_req)
+        signed_txn_bytes = bytes.fromhex(req.signed_txn.replace('0x', ''))
+        tx_hash = w3.eth.send_raw_transaction(signed_txn_bytes)
+        tx_hex = tx_hash.hex()
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+        if receipt.status != 1:
+            raise RuntimeError(f"Transaction {tx_hex} failed: {receipt}")
+
     except Exception as e:
         from traceback import format_exc
         print(format_exc())
-        raise HTTPException(500, f"Contract call failed: {e}")
+        raise HTTPException(500, f"Transaction submission failed: {e}")
 
     coll: Collection = db["proposals"]
     await coll.insert_one({
         "_id": proposal_id,
+        "id": proposal_id,
         "address": target_address,
         "description": req.tag,
         "malicious": req.malicious,
         "deadline": deadline,
         "phase": "Commit",
-        "tx_hash": tx_hash,
+        "tx_hash": tx_hex,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     })
 
-    return ProposeResponse(message="success", hash=tx_hash)
+    return ProposeResponse(message="success", hash=tx_hex)
 
 @router.get("/propose/list", response_model=ProposalListResponse)
 async def list_proposals(db=Depends(get_database)):
