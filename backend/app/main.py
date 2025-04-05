@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(WorldIDMiddleware)
+# app.add_middleware(WorldIDMiddleware)
 
 # Global background task handle
 background_task = None
