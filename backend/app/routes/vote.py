@@ -6,7 +6,7 @@ from web3 import Web3
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
-from app.services.smart_contract_client import call_contract
+from app.services.smart_contract_client import VoteContract  # Import the new class
 
 router = APIRouter(prefix="/api", tags=["votes"])
 
@@ -26,19 +26,20 @@ class VoteResponse(BaseModel):
 
 @router.post("/vote", response_model=VoteResponse)
 async def cast_vote(req: VoteRequest, db=Depends(get_database)):
-    # Generate a random salt (32 hex characters, representing 16 bytes)
+    # Generate a random salt (32 hex characters representing 16 bytes)
     salt = uuid.uuid4().hex  
     salt_bytes = bytes.fromhex(salt)
     
-    # Use web3.py to replicate Solidity's keccak256(abi.encodePacked(...))
-    vote_hash = Web3.solidityKeccak(
+    # Use web3.py's solidity_keccak to replicate Solidity's keccak256(abi.encodePacked(...))
+    vote_hash = Web3.solidity_keccak(
         ["bool", "uint256", "bytes16"],
         [req.vote, req.prediction, salt_bytes]
     ).hex()
 
     tx_req = {"proposalId": req.proposalId, "voteHash": vote_hash}
     try:
-        tx_hash = await call_contract("commitVote", tx_req)
+        # Use the new VoteContract class to call the commitVote function on-chain.
+        tx_hash = await VoteContract.call_contract("commitVote", tx_req)
     except Exception as e:
         raise HTTPException(500, f"Contract call failed: {e}")
 

@@ -1,5 +1,3 @@
-# backend/app/routes/propose.py
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
@@ -8,7 +6,7 @@ from web3 import Web3  # Import Web3 to use its to_checksum_address function
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
-from app.services.smart_contract_client import call_contract
+from app.services.smart_contract_client import VoteContract  # Updated to use VoteContract class
 
 router = APIRouter(prefix="/api", tags=["proposals"])
 
@@ -59,7 +57,7 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     }
 
     try:
-        tx_hash = await call_contract("createProposal", tx_req)
+        tx_hash = await VoteContract.call_contract("createProposal", tx_req)
     except Exception as e:
         from traceback import format_exc
         # Log the error for debugging
