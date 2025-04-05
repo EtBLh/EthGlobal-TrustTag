@@ -22,12 +22,12 @@ BASE_DIR = os.path.dirname(__file__)  # backend/app/services
 vote_abi_path = os.path.abspath(os.path.join(
     BASE_DIR, os.pardir, os.pardir, os.pardir,
     "blockchain", "TrustTag-contract", "out",
-    "TrustTagVoting.sol", "CommitRevealLabelVoting.json"
+    "TrustTagVoting.sol", "TrustTagVoting.json"
 ))
 label_abi_path = os.path.abspath(os.path.join(
     BASE_DIR, os.pardir, os.pardir, os.pardir,
     "blockchain", "TrustTag-contract", "out",
-    "TrustTagStorage.sol", "TagStorage.json"
+    "TrustTagStorage.sol", "TrustTagStorage.json"
 ))
 
 logger.info(f"Looking for vote ABI at: {vote_abi_path}")
