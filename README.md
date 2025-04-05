@@ -7,3 +7,9 @@ git submodule update --init --recursive
 foundryup
 forge install OpenZeppelin/openzeppelin-contracts
 forge build
+
+
+
+TODO
+test tee
+test rewards
