@@ -19,4 +19,4 @@ cd /host
 socat TCP-LISTEN:6000,reuseaddr,fork EXEC:/bin/sh
 
 ### FastAPI
-uvicorn main:app --reload
+uvicorn main:app --host 0.0.0.0 --port 7999
