@@ -13,23 +13,26 @@ contract CommitRevealLabelVoting is Ownable {
     enum Phase { Commit, Reveal, Finished }
 
     struct VoterCommit {
-        bytes32 voteHash;     // 投票的哈希值 (keccak256(vote + salt))
+        bytes32 voteHash;     // 投票的哈希值，計算方式為 keccak256(vote + prediction + salt)
         bool revealed;        // 是否已揭露
-        uint8 voteOption;     // 實際投票選項（reveal 後記錄）
-        uint256 stake;        // 為這次投票所鎖定的代幣數量
+        bool voteOption;      // 是否認定為惡意（YES 為 true，NO 為 false），reveal 後紀錄
+        uint8 prediction;     // 對於 YES 投票的預測百分比（例如 60 表示預測 60% 投 YES）
+        uint256 stake;        // 本次投票所鎖定的 stake
     }
 
     struct Proposal {
-        string description;                      // 提案內容描述
-        address proposer;                        // 提案人地址
-        uint256 deadline;                        // 投票截止時間（目前未實作自動過期）
-        Phase phase;                             // 當前提案所處階段
-        mapping(address => VoterCommit) commits; // 各 voter 的加密投票紀錄
-        mapping(uint8 => uint256) voteTally;     // 每個選項的揭露票數統計
-        address[] voters;                        // 投票參與者清單（為了迴圈使用）
-        uint256 totalStake;                      // 該提案鎖定的總 stake 數
-        bool finalized;                          // 是否已完成結算
-        uint8 winningLabel;                      // 得票最多的 label 結果
+        address target;                          // 被提案標註的地址
+        bool malicious;                          // 最終判定是否為惡意地址
+        string description;                      // Label 描述
+        address proposer;                        // 提案者
+        uint256 deadline;                        // 提案截止時間
+        Phase phase;                             // 提案目前階段
+        mapping(address => VoterCommit) commits; // 投票紀錄
+        mapping(bool => uint256) voteTally;      // YES/NO 統計數量
+        address[] voters;                        // 投票者清單
+        uint256 totalStake;                      // 總 stake
+        bool finalized;                          // 是否完成結算
+        bool winningLabel;                       // 最終標註結果
     }
 
     IProtocolToken public token;       
@@ -43,20 +46,21 @@ contract CommitRevealLabelVoting is Ownable {
     uint256 public constant SLASH_FAILED_PROPOSAL = 300 ether;
     uint256 public constant SLASH_WRONG_VOTE = 20 ether;
     uint256 public constant SLASH_UNREVEALED = 10 ether;
+    uint256 public constant PROPOSAL_DURATION = 3 days;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event ProposalCreated(uint256 proposalId, string description);
     event VoteCommitted(uint256 proposalId, address voter);
-    event VoteRevealed(uint256 proposalId, address voter, uint8 vote);
-    event ProposalFinalized(uint256 proposalId, uint8 winningLabel);
+    event VoteRevealed(uint256 proposalId, address voter, bool vote, uint8 prediction);
+    event ProposalFinalized(uint256 proposalId, bool label);
 
     constructor(address _token, address initialOwner) Ownable(initialOwner) {
         token = IProtocolToken(_token);
     }
 
     // =============================
-    // 💰 Stake Functions
+    // Stake Functions
     // =============================
 
     function stake(uint256 amount) external {
@@ -73,18 +77,19 @@ contract CommitRevealLabelVoting is Ownable {
     }
 
     // =============================
-    // 📌 Proposal & Voting
+    // Proposal & Voting
     // =============================
 
-    function createProposal(string calldata description, uint256 duration) external {
+    function createProposal(string calldata description, address target) external {
         require(stakes[msg.sender] >= STAKE_TO_PROPOSE, "Need 300 stake to propose");
 
         proposalCount++;
         Proposal storage p = proposals[proposalCount];
         p.description = description;
-        p.deadline = block.timestamp + duration;
+        p.deadline = block.timestamp + PROPOSAL_DURATION;
         p.phase = Phase.Commit;
         p.proposer = msg.sender;
+        p.target = target;
 
         stakes[msg.sender] -= STAKE_TO_PROPOSE;
 
@@ -93,14 +98,15 @@ contract CommitRevealLabelVoting is Ownable {
 
     function commitVote(uint256 proposalId, bytes32 voteHash) external {
         Proposal storage p = proposals[proposalId];
+        require(block.timestamp <= p.deadline, "Proposal expired");
         require(p.phase == Phase.Commit, "Not in commit phase");
         require(stakes[msg.sender] >= STAKE_TO_VOTE, "Need 20 stake to vote");
         require(p.commits[msg.sender].voteHash == 0, "Already committed");
+        require(voteHash != 0, "Vote hash cannot be zero");
 
-        p.commits[msg.sender] = VoterCommit(voteHash, false, 0, STAKE_TO_VOTE);
+        p.commits[msg.sender] = VoterCommit(voteHash, false, false, 0, STAKE_TO_VOTE);
         p.voters.push(msg.sender);
         p.totalStake += STAKE_TO_VOTE;
-
         stakes[msg.sender] -= STAKE_TO_VOTE;
 
         emit VoteCommitted(proposalId, msg.sender);
@@ -109,10 +115,13 @@ contract CommitRevealLabelVoting is Ownable {
     function startRevealPhase(uint256 proposalId) external onlyOwner {
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Commit, "Not in commit phase");
+        require(block.timestamp >= p.deadline, "Commit phase not ended");
+
         p.phase = Phase.Reveal;
+        p.deadline = block.timestamp + PROPOSAL_DURATION;
     }
 
-    function revealVote(uint256 proposalId, uint8 vote, bytes32 salt) external {
+    function revealVote(uint256 proposalId, bool vote, uint8 prediction, bytes32 salt) external {
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Reveal, "Not in reveal phase");
 
@@ -120,59 +129,41 @@ contract CommitRevealLabelVoting is Ownable {
         require(c.voteHash != 0, "No commitment");
         require(!c.revealed, "Already revealed");
 
-        bytes32 expected = keccak256(abi.encodePacked(vote, salt));
+        bytes32 expected = keccak256(abi.encodePacked(vote, prediction, salt));
         require(expected == c.voteHash, "Hash mismatch");
 
         c.revealed = true;
         c.voteOption = vote;
+        c.prediction = prediction;
         p.voteTally[vote] += 1;
 
-        emit VoteRevealed(proposalId, msg.sender, vote);
+        emit VoteRevealed(proposalId, msg.sender, vote, prediction);
     }
 
     function finalize(uint256 proposalId) external onlyOwner {
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Reveal, "Not in reveal phase");
         require(!p.finalized, "Already finalized");
+        require(block.timestamp >= p.deadline, "Reveal phase not ended");
 
-        // 找出最多票的 label（若平票只取第一個）
-        uint8 winner = 0;
-        uint256 maxVotes = 0;
-        for (uint8 i = 1; i <= 10; i++) {
-            if (p.voteTally[i] > maxVotes) {
-                maxVotes = p.voteTally[i];
-                winner = i;
-            }
-        }
+        bool winner = p.voteTally[true] >= p.voteTally[false];
 
         p.winningLabel = winner;
         p.phase = Phase.Finished;
         p.finalized = true;
+        p.malicious = winner;
 
-        // 奬勵與處罰
         for (uint i = 0; i < p.voters.length; i++) {
             address voter = p.voters[i];
             VoterCommit storage c = p.commits[voter];
 
             if (!c.revealed) {
-                // 沒 reveal 被扣 10
-                continue;
+                continue; // 可補上 token 懲罰邏輯
             }
 
             if (c.voteOption == winner) {
-                // 投對票 → 奬勵退還 stake
                 token.transfer(voter, c.stake);
-            } else {
-                // 投錯票 → stake 被懲罰
-                continue;
             }
-        }
-
-        // 若沒人 reveal，提案者失敗 → 懲罰 300
-        if (maxVotes == 0) {
-            // proposer stake 已扣，不退還
-        } else {
-            // 提案者成功，可設計獎勵（此範例未退還 proposer 的 stake）
         }
 
         emit ProposalFinalized(proposalId, winner);
