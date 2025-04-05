@@ -9,10 +9,9 @@ from web3 import Web3
 
 from app.db.mongodb import get_database
 from app.services.smart_contract_client import call_contract
-from app.services.tee_client import compute_rewards  # your TEE integration
+from app.services.tee_client import TeeClient
 
 logger = logging.getLogger(__name__)
-
 
 async def start_reveal_phase_job():
     """
@@ -26,7 +25,7 @@ async def start_reveal_phase_job():
     to_start = await proposals.find({
         "phase": "Commit",
         "deadline": {"$lte": now}
-    }).to_list(length=50)
+    }).to_list()
 
     for p in to_start:
         proposal_id = p["_id"]
@@ -38,6 +37,7 @@ async def start_reveal_phase_job():
                 "proposalId": proposal_id,
                 "deadline": reveal_deadline
             })
+            
             # update DB
             await proposals.update_one(
                 {"_id": proposal_id},
@@ -59,7 +59,6 @@ async def finalize_reward_job():
     """
     db = await get_database()
     proposals: Collection = db["proposals"]
-    votes_salts: Collection = db["votes_salts"]
     rewards: Collection = db["rewards"]
 
     now = datetime.now(timezone.utc)
@@ -80,7 +79,7 @@ async def finalize_reward_job():
 
         # 2) compute rewards via TEE
         try:
-            tee_results = await compute_rewards(proposal_id, voters)
+            tee_results = await TeeClient.compute_rewards(proposal_id, voters)
             # tee_results: List[{"address": str, "score": int}]
         except Exception as e:
             logger.error(f"finalize_reward_job: compute_rewards failed for {proposal_id}: {e}")

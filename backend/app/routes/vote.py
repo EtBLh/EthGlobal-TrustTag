@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from datetime import datetime
-import uuid, hashlib
+import uuid
+from web3 import Web3
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
@@ -25,9 +26,15 @@ class VoteResponse(BaseModel):
 
 @router.post("/vote", response_model=VoteResponse)
 async def cast_vote(req: VoteRequest, db=Depends(get_database)):
-    salt = uuid.uuid4().hex
-    packed = f"{req.vote}{req.prediction}{salt}".encode()
-    vote_hash = hashlib.sha3_256(packed).hexdigest()
+    # Generate a random salt (32 hex characters, representing 16 bytes)
+    salt = uuid.uuid4().hex  
+    salt_bytes = bytes.fromhex(salt)
+    
+    # Use web3.py to replicate Solidity's keccak256(abi.encodePacked(...))
+    vote_hash = Web3.solidityKeccak(
+        ["bool", "uint256", "bytes16"],
+        [req.vote, req.prediction, salt_bytes]
+    ).hex()
 
     tx_req = {"proposalId": req.proposalId, "voteHash": vote_hash}
     try:
@@ -35,7 +42,7 @@ async def cast_vote(req: VoteRequest, db=Depends(get_database)):
     except Exception as e:
         raise HTTPException(500, f"Contract call failed: {e}")
 
-    coll: Collection = db["votes_salts"]
+    coll: Collection = db["votes"]
     record_id = str(uuid.uuid4())
     await coll.insert_one({
         "_id": record_id,

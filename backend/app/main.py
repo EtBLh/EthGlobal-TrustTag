@@ -7,11 +7,12 @@ from app.routes.middleware import WorldIDMiddleware
 from app.routes.propose import router as propose_router
 from app.routes.vote import router as vote_router
 from app.routes.rewards import router as rewards_router
+from app.routes.scheduler import router as scheduler_router
 
 logger = logging.getLogger("uvicorn.error")
 
-app = FastAPI(title="Decentralized Labeling Backend")
-app.add_middleware(WorldIDMiddleware)
+app = FastAPI(title="TrusTag Backend")
+# app.add_middleware(WorldIDMiddleware)
 
 # Global background task handle
 background_task = None
@@ -59,3 +60,4 @@ async def on_shutdown():
 app.include_router(propose_router)
 app.include_router(vote_router)
 app.include_router(rewards_router)
+app.include_router(scheduler_router)
