@@ -47,6 +47,7 @@ contract CommitRevealLabelVoting is Ownable {
     uint256 public constant SLASH_FAILED_PROPOSAL = 300 ether;
     uint256 public constant SLASH_UNREVEALED = 10 ether;
     uint256 public constant PROPOSAL_DURATION = 3 days;
+    uint256 public constant MIN_VOTE_COUNT = 30;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
@@ -118,6 +119,17 @@ contract CommitRevealLabelVoting is Ownable {
         require(p.phase == Phase.Commit, "Not in commit phase");
         require(block.timestamp >= p.deadline, "Commit phase not ended");
 
+        if (p.voters.length < MIN_VOTE_COUNT) {
+            for (uint i = 0; i < p.voters.length; i++) {
+                address voter = p.voters[i];
+                VoterCommit storage c = p.commits[voter];
+                stakes[voter] += c.stake;
+            }
+            p.phase = Phase.Finished;
+            p.finalized = true;
+            return;
+        }
+
         p.phase = Phase.Reveal;
         p.deadline = block.timestamp + PROPOSAL_DURATION;
     }
@@ -148,6 +160,18 @@ contract CommitRevealLabelVoting is Ownable {
         require(block.timestamp >= p.deadline, "Reveal phase not ended");
         require(voterList.length == rewardList.length, "Length mismatch");
 
+        if (voterList.length < MIN_VOTE_COUNT) {
+            for (uint i = 0; i < voterList.length; i++) {
+                address voter = voterList[i];
+                VoterCommit storage c = p.commits[voter];
+                stakes[voter] += c.stake;
+                c.reward = 0;
+            }
+            p.phase = Phase.Finished;
+            p.finalized = true;
+            return;
+        }
+
         bool winner = p.voteTally[true] >= p.voteTally[false];
         p.winningLabel = winner;
         p.phase = Phase.Finished;
@@ -162,11 +186,9 @@ contract CommitRevealLabelVoting is Ownable {
             if (!c.revealed) {
                 stakes[voter] = stakes[voter] + c.stake - SLASH_UNREVEALED;
                 c.reward = 0;
-            }
-            else if (c.voteOption != winner) {
+            } else if (c.voteOption != winner) {
                 c.reward = 0;
-            }
-            else {
+            } else {
                 c.reward = reward;
                 stakes[voter] += c.stake;
             }
