@@ -6,10 +6,6 @@ import { Abi } from 'viem';
 const labelAbi = LabelContractABI.abi as Abi;
 const voteAbi = VoteContractABI.abi as Abi;
 
-// // Contract addresses - set from environment variables or config
-// const VOTE_CONTRACT_ADDRESS = process.env.REACT_APP_VOTE_CONTRACT_ADDRESS || '0x3EE545015530c36F42A676190d98c86Fd3D6c659';
-// const LABEL_CONTRACT_ADDRESS = process.env.REACT_APP_LABEL_CONTRACT_ADDRESS || '0xEFd89ffe442DfeCC12bDcBfef74a2764c1408177';
-
 export const stakeWithPermit = async (amount: number, deadline: Date) => {
   const tx = {
     address: "0xYourContractAddress",
