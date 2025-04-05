@@ -2,38 +2,48 @@
 // import { VerifyBlock } from "./components/Verify";
 import Tag from '@/icons/tag.svg?react'
 import RightArrow from '@/icons/rightarrow.svg?react'
-import Propose from '@/icons/propose.svg?react'
 // import ProposeCard from '@/components/propose-card'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { proposal } from '@/type';
-import { Link } from 'react-router';
+import { proposal } from '@/lib/type';
+import { Link, useNavigate } from 'react-router';
 import ProposalListItem from '@/components/proposal-listitem'
-
-const mockProposals:proposal[] = [
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'normal_user'
-  },
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'scam'
-  },
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'gamble'
-  },
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'exchange'
-  }
-]
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { MiniKit } from '@worldcoin/minikit-js';
 
 export default function IndexPage() {
+
+  const navigate = useNavigate();
+
+  const [list, setList] = useState<any[]>([]);
+  const [canClaim, setCanCliam] = useState(false);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}api/propose/list`)
+      .then(res => res.json())
+      .then(json => setList(json.list))
+  }, [])
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}api/rewards`, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      method: 'POST',
+      body: JSON.stringify({
+        address: MiniKit.walletAddress ?? '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700'
+      })
+    })
+      .then(res => res.json())
+      .then(json => {
+        if (json.list && json.list.filter((item:any) => item.claimed_at === null).length > 0) {
+          setCanCliam(true);
+        }
+      })
+  }, [])
+
+
   return (
     <main className="flex flex-col relative">
       <header className='text-lg font-bold flex flex-row gap-1/2 items-center gap-2 px-4 py-2 border-b border-gray-600'>
@@ -42,7 +52,8 @@ export default function IndexPage() {
       </header>
       <div className='flex flex-row items-baseline mt-6 px-2'>
         <span className='text-lg space-mono-semibold'>TAG</span>
-        <span className='space-mono-bold text-5xl outfit'>12.32</span>
+        <span className='space-mono-bold text-5xl outfit flex-1'>12.32</span>
+        <Button className='self-center bg-indigo-500' disabled={!canClaim} onClick={() => navigate('/claim')}>Claim</Button>
       </div>
       <Link to={'/propose'} viewTransition>
         <Alert className='my-4 mx-2 relative'>
@@ -62,19 +73,18 @@ export default function IndexPage() {
         <TabsContent value="proposals" className='w-full h-full'>
           <div className='flex flex-col w-full h-full gap-3 mt-2'>          
           {
-            mockProposals.map(props => <ProposalListItem {...props}/>)
+            list.filter((item:any) => item.phase === 'Commit').map(props => <ProposalListItem {...props}/>)
           }
           </div>
         </TabsContent>
         <TabsContent value="user_vote">
-
+          <div className='flex flex-col w-full h-full gap-3 mt-2'>          
+            {
+              list.filter((item:any) => item.phase !== 'Commit').map(props => <ProposalListItem {...props}/>)
+            }
+          </div>
         </TabsContent>
       </Tabs>
-      <Link to='/propose'>
-        <button className='absolute left-3 bottom-3 bg-indigo-500 p-2 rounded-xl drop-shadow drop-shadow-indigo-500 text-indigo-900'>
-          <Propose className='text-indigo-900'/>
-        </button>
-      </Link>
     </main>
   );
 }

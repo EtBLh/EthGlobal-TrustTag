@@ -158,7 +158,7 @@ const ProposePage = () => {
     const [isMalicious, setMalicious] = useState<boolean | undefined>(false);
 
     return (
-        <main className="flex flex-col relative">
+        <main className="flex flex-col relative flex-1">
             <header className='text-lg font-bold flex flex-row gap-1/2 items-center gap-2 px-4 py-2 border-b border-gray-600 fixed top-0 left-0 w-full h-[48px]'>
                 <Link to='/home'>
                     <BackArrowIcon width={24} height={24} style={{ color: 'white' }} />

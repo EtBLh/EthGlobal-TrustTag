@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import MiniKitProvider from "./minikit-provider.tsx";
 import { StrictMode } from "react";
-import { ErudaProvider } from "./components/Eruda";
+import { ErudaProvider } from "./components/Eruda/index.tsx";
 
 import "./index.css";
 import "./font.css"

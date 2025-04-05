@@ -7,7 +7,7 @@ import { Link } from 'react-router';
 
 const VotePage = () => {
   return (
-    <main className="flex flex-col relative max-w-screen">
+    <main className="flex flex-col relative max-w-screen flex-1">
       <header className='text-lg font-bold flex flex-row gap-1/2 items-center gap-2 px-4 py-2 border-b border-gray-600'>
         <Link to='/home'>
           <BackArrowIcon width={24} height={24} style={{ color: 'white' }} />

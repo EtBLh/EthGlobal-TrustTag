@@ -1,5 +1,9 @@
-// components/PageWrapper.tsx
 import { motion } from 'framer-motion'
+import Propose from '@/icons/propose.svg?react'
+import Search from '@/icons/search.svg?react'
+import Home from '@/icons/home.svg?react'
+import Reward from '@/icons/rewards.svg?react'
+import { Link } from 'react-router'
 
 const variants = {
     ltr: {
@@ -29,8 +33,19 @@ export default function PageWrapper({ variant, children }: props) {
     >
       <div className='flex flex-col justify-between h-screen'>
       {children}
-      <nav className='border-t-2 p-2 flex flex-row'>
-        asdf
+      <nav className='border-t-2 p-2 flex flex-row h-[54px] justify-between px-[64px] items-center'>
+        <Link to='/search'>
+            <Search className='text-indigo-200'/>
+        </Link>
+        <Link to='/home'>
+            <Home className='text-indigo-200'/>
+        </Link>
+        <Link to='/propose'>
+            <Propose className='text-indigo-200'/>
+        </Link>
+        <Link to='/claim'>
+            <Reward className='text-indigo-200'/>
+        </Link>
       </nav>
       </div>
     </motion.div>
