@@ -5,7 +5,7 @@ const Eruda = lazy(() =>
 );
 
 export const ErudaProvider = (props: { children: ReactNode }) => {
-  if (process.env.PROD) {
+  if (import.meta.env.PROD) {
     return props.children;
   }
 

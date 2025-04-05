@@ -27,7 +27,12 @@ export default function PageWrapper({ variant, children }: props) {
       exit="exit"
       style={{ position: 'absolute', width: '100%' }}
     >
+      <div className='flex flex-col justify-between h-screen'>
       {children}
+      <nav className='border-t-2 p-2 flex flex-row'>
+        asdf
+      </nav>
+      </div>
     </motion.div>
   )
 }

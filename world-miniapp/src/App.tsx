@@ -1,5 +1,6 @@
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
-import IndexPage from "./page";
+import { HashRouter, Route, Routes, useLocation } from "react-router";
+import SplashScreen from "./page";
+import HomePage from "./page/home";
 import VotePage from "./page/vote";
 import ProposePage from "./page/propose";
 import { AnimatePresence } from "framer-motion";
@@ -10,7 +11,8 @@ export function AnimatedRoutes() {
   return (
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          <Route index element={<PageWrapper variant="ltr"><IndexPage /></PageWrapper>} />
+          <Route index element={<SplashScreen />} />
+          <Route path='/home' element={<PageWrapper variant="ltr"><HomePage /></PageWrapper>} />
           <Route path='/vote' element={<PageWrapper variant="ltr"><VotePage /></PageWrapper>} />
           <Route path='/propose' element={<PageWrapper variant="ltr"><ProposePage /></PageWrapper>} />
         </Routes>
@@ -19,5 +21,7 @@ export function AnimatedRoutes() {
 }
 
 export default function () {
-  return <BrowserRouter> <AnimatedRoutes/> </BrowserRouter>
+  return <HashRouter>
+      <AnimatedRoutes/>
+  </HashRouter>
 }

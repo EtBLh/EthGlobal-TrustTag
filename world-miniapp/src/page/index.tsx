@@ -1,80 +1,66 @@
-// import { PayBlock } from "./components/Pay";
-// import { VerifyBlock } from "./components/Verify";
+import { Button } from '@/components/ui/button'
 import Tag from '@/icons/tag.svg?react'
-import RightArrow from '@/icons/rightarrow.svg?react'
-import Propose from '@/icons/propose.svg?react'
-// import ProposeCard from '@/components/propose-card'
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { proposal } from '@/type';
-import { Link } from 'react-router';
-import ProposalListItem from '@/components/proposal-listitem'
+import { MiniKit } from '@worldcoin/minikit-js'
+import { useNavigate } from 'react-router'
 
-const mockProposals:proposal[] = [
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'normal_user'
-  },
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'scam'
-  },
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'gamble'
-  },
-  {
-    _id: '1234',
-    address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700',
-    tag: 'exchange'
-  }
-]
+const SplashScreen = () => {
 
-export default function IndexPage() {
-  return (
-    <main className="flex min-h-screen flex-col relative">
-      <header className='text-lg font-bold flex flex-row gap-1/2 items-center gap-2 px-4 py-2 border-b border-gray-600'>
-        <Tag width={24} height={24} style={{color: 'white'}}/>
-        <span className='text-xl montserrat font-normal'>TrustTag</span>
-      </header>
-      <div className='flex flex-row items-baseline mt-6 px-2'>
-        <span className='text-lg space-mono-semibold'>TAG</span>
-        <span className='space-mono-bold text-5xl outfit'>12.32</span>
-      </div>
-      <Link to={'/propose'} viewTransition>
-        <Alert className='my-4 mx-2 relative'>
-            <Tag className="h-4 w-4" />
-            <AlertTitle>Propose a Tag!</AlertTitle>
-            <AlertDescription>
-                Propse a tag to earn TAG token!
-            </AlertDescription>
-            <RightArrow style={{width:'24px', height: '24px'}} className="text-gray-1000 absolute right-1 top-1/2 transform-[translateY(-50%)]"/>
-        </Alert>
-      </Link>
-      <Tabs defaultValue="proposals" className="flex-1 mx-2 mt-2">
-        <TabsList className='w-full'>
-          <TabsTrigger value="proposals">Current Proposals</TabsTrigger>
-          <TabsTrigger value="user_vote">Past Proposals</TabsTrigger>
-        </TabsList>
-        <TabsContent value="proposals" className='w-full h-full'>
-          <div className='flex flex-col w-full h-full gap-3 mt-2'>          
-          {
-            mockProposals.map(props => <ProposalListItem {...props}/>)
-          }
-          </div>
-        </TabsContent>
-        <TabsContent value="user_vote">
+    const navigate = useNavigate();
 
-        </TabsContent>
-      </Tabs>
-      <Link to='/propose'>
-        <button className='absolute left-3 bottom-3 bg-indigo-500 p-2 rounded-xl drop-shadow drop-shadow-indigo-500 text-indigo-900'>
-          <Propose className='text-indigo-900'/>
-        </button>
-      </Link>
+    const signInWithWallet = async () => {
+        // if (!MiniKit.isInstalled()) {
+        //     alert('minikit not found');
+        //     console.log('minikit not found')
+        //     return;
+        // }
+    
+        const res = await fetch(`${import.meta.env.VITE_AUTH_API_URL}api/nonce`,{
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'whatever'
+            }
+        })
+        const { nonce } = await res.json()
+    
+        const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
+            nonce: nonce,
+            expirationTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
+            notBefore: new Date(new Date().getTime() - 24 * 60 * 60 * 1000),
+            statement: '[walletAuth] TrustTag',
+        })
+    
+        if (finalPayload.status === 'error') {
+            console.log('wallet auth error', finalPayload)
+            return
+        } else {
+            console.log(finalPayload)
+            await fetch(`${import.meta.env.VITE_AUTH_API_URL}api/complete-siwe`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    payload: finalPayload,
+                    nonce,
+                }),
+            })
+            navigate('/home');
+        }
+    }
+
+    return (
+    <main className="flex min-h-screen flex-col relative p-4">
+        <div className='flex flex-row items-center gap-2'>
+            <Tag style={{color: 'white', width: 32, height: 32}} />
+            <span className='text-4xl outfit'>TrustTag</span>
+            <span>EthGlobal</span>
+        </div>
+        <div className='flex-1 space-mono-regular mt-2'>
+            A Decentralized address tagging system
+        </div>
+        <Button className='bg-indigo-300 rounded-full h-[48px] text-lg hover:bg-indigo-400' onClick={() => signInWithWallet()}>Enter</Button>
     </main>
-  );
+    )
 }
+
+export default SplashScreen;

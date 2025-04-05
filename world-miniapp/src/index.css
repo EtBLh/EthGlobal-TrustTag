@@ -64,8 +64,9 @@
   }
 }
 
-
-body {
-  background-color: #01000c;
-  color: white;
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #01000c;
+    color: white;
+  }
 }
