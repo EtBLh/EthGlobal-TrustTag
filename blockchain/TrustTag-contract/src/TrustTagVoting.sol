@@ -82,7 +82,7 @@ contract CommitRevealLabelVoting is Ownable {
     // Proposal & Voting
     // =============================
 
-    function createProposal(string calldata description, address target) external {
+    function createProposal(address target, bool malicious, string calldata description) external {
         require(stakes[msg.sender] >= STAKE_TO_PROPOSE, "Need 300 stake to propose");
 
         proposalCount++;
@@ -92,6 +92,7 @@ contract CommitRevealLabelVoting is Ownable {
         p.phase = Phase.Commit;
         p.proposer = msg.sender;
         p.target = target;
+        p.malicious = malicious;
 
         stakes[msg.sender] -= STAKE_TO_PROPOSE;
 
