@@ -36,9 +36,8 @@ contract CommitRevealLabelVoting is Ownable {
         bool winningLabel;                       // 最終標註結果
     }
 
-    IProtocolToken public token;       
-    uint256 public proposalCount;                       // 紀錄目前共產生幾個提案
-    mapping(uint256 => Proposal) public proposals;      // 依照提案 ID 存放每個提案的詳細資訊
+    IProtocolToken public token;
+    mapping(string => Proposal) public proposals;      // 依照提案 ID 存放每個提案的詳細資訊
     mapping(address => uint256) public stakes;          // 記錄每個使用者目前已 stake 但尚未參與投票的餘額，可被用來再次投票或提案。
 
     // 配置參數(規範提案、投票需要的最小 stake、投票不誠實或不揭露時的懲罰方式)
@@ -46,16 +45,15 @@ contract CommitRevealLabelVoting is Ownable {
     uint256 public constant STAKE_TO_VOTE = 20 ether;
     uint256 public constant SLASH_FAILED_PROPOSAL = 300 ether;
     uint256 public constant SLASH_UNREVEALED = 10 ether;
-    uint256 public constant PROPOSAL_DURATION = 3 days;
     uint256 public constant MIN_VOTE_COUNT = 30;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
-    event ProposalCreated(uint256 proposalId, string description);
-    event VoteCommitted(uint256 proposalId, address voter);
-    event VoteRevealed(uint256 proposalId, address voter, bool vote, uint8 prediction);
-    event ProposalFinalized(uint256 proposalId, bool label);
-    event RewardClaimed(uint256 proposalId, address voter, uint256 amount);
+    event ProposalCreated(string proposalId, string description);
+    event VoteCommitted(string proposalId, address voter);
+    event VoteRevealed(string proposalId, address voter, bool vote, uint8 prediction);
+    event ProposalFinalized(string proposalId, bool label);
+    event RewardClaimed(string proposalId, address voter, uint256 amount);
 
     constructor(address _token, address initialOwner) Ownable(initialOwner) {
         token = IProtocolToken(_token);
@@ -82,13 +80,11 @@ contract CommitRevealLabelVoting is Ownable {
     // Proposal & Voting
     // =============================
 
-    function createProposal(address target, bool malicious, string calldata description) external {
+    function createProposal(string calldata proposalId, address target, bool malicious, string calldata description, uint256 deadline) external {
         require(stakes[msg.sender] >= STAKE_TO_PROPOSE, "Need 300 stake to propose");
-
-        proposalCount++;
-        Proposal storage p = proposals[proposalCount];
+        Proposal storage p = proposals[proposalId];
         p.description = description;
-        p.deadline = block.timestamp + PROPOSAL_DURATION;
+        p.deadline = deadline;
         p.phase = Phase.Commit;
         p.proposer = msg.sender;
         p.target = target;
@@ -96,10 +92,10 @@ contract CommitRevealLabelVoting is Ownable {
 
         stakes[msg.sender] -= STAKE_TO_PROPOSE;
 
-        emit ProposalCreated(proposalCount, description);
+        emit ProposalCreated(proposalId, description);
     }
 
-    function commitVote(uint256 proposalId, bytes32 voteHash) external {
+    function commitVote(string calldata proposalId, bytes32 voteHash) external {
         Proposal storage p = proposals[proposalId];
         require(block.timestamp <= p.deadline, "Proposal expired");
         require(p.phase == Phase.Commit, "Not in commit phase");
@@ -115,7 +111,7 @@ contract CommitRevealLabelVoting is Ownable {
         emit VoteCommitted(proposalId, msg.sender);
     }
 
-    function startRevealPhase(uint256 proposalId) external onlyOwner {
+    function startRevealPhase(string calldata proposalId, uint256 deadline) external onlyOwner {
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Commit, "Not in commit phase");
         require(block.timestamp >= p.deadline, "Commit phase not ended");
@@ -132,14 +128,14 @@ contract CommitRevealLabelVoting is Ownable {
         }
 
         p.phase = Phase.Reveal;
-        p.deadline = block.timestamp + PROPOSAL_DURATION;
+        p.deadline = deadline;
     }
 
-    function revealVote(uint256 proposalId, bool vote, uint8 prediction, bytes32 salt) external {
+    function revealVote(string calldata proposalId, address voter, bool vote, uint8 prediction, bytes32 salt) external onlyOwner{
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Reveal, "Not in reveal phase");
 
-        VoterCommit storage c = p.commits[msg.sender];
+        VoterCommit storage c = p.commits[voter];
         require(c.voteHash != 0, "No commitment");
         require(!c.revealed, "Already revealed");
 
@@ -151,15 +147,16 @@ contract CommitRevealLabelVoting is Ownable {
         c.prediction = prediction;
         p.voteTally[vote] += 1;
 
-        emit VoteRevealed(proposalId, msg.sender, vote, prediction);
+        emit VoteRevealed(proposalId, voter, vote, prediction);
     }
 
-    function finalize(uint256 proposalId, address[] calldata voterList, uint256[] calldata rewardList) external onlyOwner {
+    function finalize(string calldata proposalId, address[] calldata voterList, uint256[] calldata rewardList) external onlyOwner {
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Reveal, "Not in reveal phase");
         require(!p.finalized, "Already finalized");
         require(block.timestamp >= p.deadline, "Reveal phase not ended");
         require(voterList.length == rewardList.length, "Length mismatch");
+        require(voterList.length == p.voters.length, "Voter list mismatch");
 
         if (voterList.length < MIN_VOTE_COUNT) {
             for (uint i = 0; i < voterList.length; i++) {
@@ -172,14 +169,13 @@ contract CommitRevealLabelVoting is Ownable {
             p.finalized = true;
             return;
         }
-
         bool winner = p.voteTally[true] >= p.voteTally[false];
         p.winningLabel = winner;
         p.phase = Phase.Finished;
         p.finalized = true;
         p.malicious = winner;
-
         for (uint i = 0; i < voterList.length; i++) {
+            require(voterList[i] == p.voters[i], "Voter list mismatch");
             address voter = voterList[i];
             uint256 reward = rewardList[i];
             VoterCommit storage c = p.commits[voter];
@@ -205,7 +201,7 @@ contract CommitRevealLabelVoting is Ownable {
         emit ProposalFinalized(proposalId, winner);
     }
 
-    function claimReward(uint256 proposalId) external {
+    function claimReward(string calldata proposalId) external {
         Proposal storage p = proposals[proposalId];
         VoterCommit storage c = p.commits[msg.sender];
         require(p.finalized, "Not finalized");
@@ -218,7 +214,7 @@ contract CommitRevealLabelVoting is Ownable {
         emit RewardClaimed(proposalId, msg.sender, c.reward);
     }
 
-    function getProposalVoters(uint256 proposalId) external view returns (address[] memory) {
+    function getProposalVoters(string calldata proposalId) external view returns (address[] memory) {
         return proposals[proposalId].voters;
     }
 }
