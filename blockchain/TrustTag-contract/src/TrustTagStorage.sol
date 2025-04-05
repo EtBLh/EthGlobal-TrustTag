@@ -13,7 +13,7 @@ contract TagStorage is Ownable {
     mapping(bytes32 => TagData) public tags;
     mapping(address => uint256) public stakes;
 
-    uint256 public constant MIN_STAKE_REQUIREMENT = 300;
+    uint256 public constant MIN_STAKE_REQUIREMENT = 300 ether;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
@@ -37,11 +37,10 @@ contract TagStorage is Ownable {
     }
 
     function updateLabel(
-        address targetAddress,
+        bytes32 hashedAddress,
         string calldata description,
         bool malicious
     ) external onlyOwner {
-        bytes32 hashedAddress = keccak256(abi.encodePacked(targetAddress));
         tags[hashedAddress] = TagData(description, malicious);
     }
 
