@@ -2,47 +2,43 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 import uuid
-from web3 import Web3  # Import Web3 to use its to_checksum_address function
+from web3 import Web3  # For checksum conversion
 
 from app.db.mongodb import get_database
 from pymongo.collection import Collection
-from app.services.smart_contract_client import VoteContract  # Updated to use VoteContract class
+from app.services.smart_contract_client import VoteContract  # Use the VoteContract class
 
 router = APIRouter(prefix="/api", tags=["proposals"])
 
-
 class ProposeRequest(BaseModel):
     address: str
-    tag: str               # description in contract
+    tag: str               # Description in contract
     proof: str
     malicious: bool
-    verifyPayload: dict    # already verified by middleware
-
+    verifyPayload: dict    # Already verified by middleware
 
 class ProposeResponse(BaseModel):
     message: str
     hash: str | None = None
 
-
 class ProposalListItem(BaseModel):
+    id: str
     _id: str
     address: str
     tag: str
     malicious: bool
     deadline: datetime
-    phase: str             # new field
-
+    phase: str
 
 class ProposalListResponse(BaseModel):
     list: list[ProposalListItem]
-
 
 @router.post("/propose", response_model=ProposeResponse)
 async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     proposal_id = str(uuid.uuid4())
     deadline = datetime.now(timezone.utc) + timedelta(hours=24)
 
-    # Convert the provided address to a checksummed address.
+    # Convert the provided address to checksummed format.
     try:
         target_address = Web3.to_checksum_address(req.address)
     except Exception as e:
@@ -51,7 +47,7 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
     tx_req = {
         "proposalId": proposal_id,
         "deadline": int(deadline.timestamp()),
-        "target": target_address,  # Use the checksummed address
+        "target": target_address,
         "malicious": req.malicious,
         "description": req.tag,
     }
@@ -60,7 +56,6 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
         tx_hash = await VoteContract.call_contract("createProposal", tx_req)
     except Exception as e:
         from traceback import format_exc
-        # Log the error for debugging
         print(format_exc())
         raise HTTPException(500, f"Contract call failed: {e}")
 
@@ -71,7 +66,7 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
         "description": req.tag,
         "malicious": req.malicious,
         "deadline": deadline,
-        "phase": "Commit",                  # initialize phase
+        "phase": "Commit",
         "tx_hash": tx_hash,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
@@ -79,12 +74,12 @@ async def propose_tag(req: ProposeRequest, db=Depends(get_database)):
 
     return ProposeResponse(message="success", hash=tx_hash)
 
-
 @router.get("/propose/list", response_model=ProposalListResponse)
 async def list_proposals(db=Depends(get_database)):
     docs = await db["proposals"].find({"phase": "Commit"}).to_list(length=100)
     items = [
         ProposalListItem(
+            id=d["_id"],
             _id=d["_id"],
             address=d["address"],
             tag=d["description"],
