@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+
+interface IProtocolToken {
+    function transfer(address to, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+}
 
 contract TagStorage is Ownable {
     struct TagData {
@@ -10,15 +14,19 @@ contract TagStorage is Ownable {
         bool malicious;
     }
 
+    IProtocolToken public token;       
+
     mapping(bytes32 => TagData) public tags;
     mapping(address => uint256) public stakes;
 
-    uint256 public constant MIN_STAKE_REQUIREMENT = 300;
+    uint256 public constant MIN_STAKE_REQUIREMENT = 300 ether;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
 
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner, address _token) Ownable(initialOwner) {
+        token = IProtocolToken(_token);
+    }
 
     function stake(uint256 amount) external {
         require(
@@ -37,11 +45,10 @@ contract TagStorage is Ownable {
     }
 
     function updateLabel(
-        address targetAddress,
+        bytes32 hashedAddress,
         string calldata description,
         bool malicious
     ) external onlyOwner {
-        bytes32 hashedAddress = keccak256(abi.encodePacked(targetAddress));
         tags[hashedAddress] = TagData(description, malicious);
     }
 
