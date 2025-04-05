@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IProtocolToken {
@@ -18,6 +17,8 @@ contract CommitRevealLabelVoting is Ownable {
         bool voteOption;      // 是否認定為惡意（YES 為 true，NO 為 false），reveal 後紀錄
         uint8 prediction;     // 對於 YES 投票的預測百分比（例如 60 表示預測 60% 投 YES）
         uint256 stake;        // 本次投票所鎖定的 stake
+        uint256 reward;       // 投票後獲得的獎勵
+        bool claimed;         // 是否已經領取獎勵
     }
 
     struct Proposal {
@@ -54,6 +55,7 @@ contract CommitRevealLabelVoting is Ownable {
     event VoteCommitted(uint256 proposalId, address voter);
     event VoteRevealed(uint256 proposalId, address voter, bool vote, uint8 prediction);
     event ProposalFinalized(uint256 proposalId, bool label);
+    event RewardClaimed(uint256 proposalId, address voter, uint256 amount);
 
     constructor(address _token, address initialOwner) Ownable(initialOwner) {
         token = IProtocolToken(_token);
@@ -104,7 +106,7 @@ contract CommitRevealLabelVoting is Ownable {
         require(p.commits[msg.sender].voteHash == 0, "Already committed");
         require(voteHash != 0, "Vote hash cannot be zero");
 
-        p.commits[msg.sender] = VoterCommit(voteHash, false, false, 0, STAKE_TO_VOTE);
+        p.commits[msg.sender] = VoterCommit(voteHash, false, false, 0, STAKE_TO_VOTE, 0, false);
         p.voters.push(msg.sender);
         p.totalStake += STAKE_TO_VOTE;
         stakes[msg.sender] -= STAKE_TO_VOTE;
@@ -147,7 +149,6 @@ contract CommitRevealLabelVoting is Ownable {
         require(block.timestamp >= p.deadline, "Reveal phase not ended");
 
         bool winner = p.voteTally[true] >= p.voteTally[false];
-
         p.winningLabel = winner;
         p.phase = Phase.Finished;
         p.finalized = true;
@@ -158,14 +159,34 @@ contract CommitRevealLabelVoting is Ownable {
             VoterCommit storage c = p.commits[voter];
 
             if (!c.revealed) {
-                continue; // 可補上 token 懲罰邏輯
+                c.reward = 0;
+                continue;
             }
 
             if (c.voteOption == winner) {
-                token.transfer(voter, c.stake);
+                c.reward = c.stake + 10 ether; // 可自訂為 BTS 計算後金額
+            } else {
+                c.reward = 0;
             }
         }
 
         emit ProposalFinalized(proposalId, winner);
+    }
+
+    function claimReward(uint256 proposalId) external {
+        Proposal storage p = proposals[proposalId];
+        VoterCommit storage c = p.commits[msg.sender];
+        require(p.finalized, "Not finalized");
+        require(c.revealed, "Did not reveal");
+        require(!c.claimed, "Already claimed");
+        require(c.reward > 0, "No reward");
+
+        c.claimed = true;
+        require(token.transfer(msg.sender, c.reward), "Reward transfer failed");
+        emit RewardClaimed(proposalId, msg.sender, c.reward);
+    }
+
+    function getProposalVoters(uint256 proposalId) external view returns (address[] memory) {
+        return proposals[proposalId].voters;
     }
 }
