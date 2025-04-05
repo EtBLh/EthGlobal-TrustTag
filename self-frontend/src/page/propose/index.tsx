@@ -16,7 +16,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { createProposal } from "@/web3";
-import { ISuccessResult, MiniKit, VerificationLevel, VerifyCommandInput } from "@worldcoin/minikit-js";
 
 const SelectOption = (props: {
     title: string,

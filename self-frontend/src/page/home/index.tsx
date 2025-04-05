@@ -10,7 +10,6 @@ import { Link, useNavigate } from 'react-router';
 import ProposalListItem from '@/components/proposal-listitem'
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MiniKit } from '@worldcoin/minikit-js';
 
 export default function IndexPage() {
 
@@ -42,8 +41,6 @@ export default function IndexPage() {
         }
       })
   }, [])
-
-  console.log('wallet', MiniKit.user);
 
   return (
     <main className="flex flex-col relative">

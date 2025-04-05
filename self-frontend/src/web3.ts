@@ -1,5 +1,4 @@
 import Web3 from 'web3';
-import { MiniKit } from '@worldcoin/minikit-js'
 import VoteContractABI from '../../blockchain/TrustTag-contract/out/TrustTagVoting.sol/TrustTagVoting.json';
 import LabelContractABI from '../../blockchain/TrustTag-contract/out/TrustTagStorage.sol/TrustTagStorage.json';
 import { Abi } from 'viem';

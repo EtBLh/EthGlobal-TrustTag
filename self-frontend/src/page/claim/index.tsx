@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import BackArrowIcon from '@/icons/backarrow.svg?react'
 import Tag from '@/icons/tag.svg?react'
-import { MiniKit } from "@worldcoin/minikit-js";
 import { Button } from "@/components/ui/button";
 import { shortenAddr } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
