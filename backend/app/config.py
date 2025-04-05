@@ -2,7 +2,7 @@ import os
 
 # Basic configuration settings for the application
 
-TEE_CLIENT_URL = os.getenv("TEE_CLIENT_URL", "https://1eea-2001-b011-3813-111f-3d7d-4343-e8c4-d91.ngrok-free.app")
+TEE_CLIENT_URL = os.getenv("TEE_CLIENT_URL", "http://localhost:7999")
 
 BACKEND_WALLET_PRIVATE_KEY = os.getenv("BACKEND_WALLET_PRIVATE_KEY", "0x6c156ca8d84657e2072639f8cad5f8ef4e26e3bc64299231e10f45fe4e736f3c")
 
