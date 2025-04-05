@@ -4,7 +4,8 @@ import os
 
 # Blockchain & Smart Contract settings
 BLOCKCHAIN_RPC_URL = os.getenv("BLOCKCHAIN_RPC_URL", "http://localhost:8545")
-SMART_CONTRACT_ADDRESS = os.getenv("SMART_CONTRACT_ADDRESS", "0xYourSmartContractAddress")
+VOTE_CONTRACT_ADDRESS = os.getenv("VOTE_CONTRACT_ADDRESS", "0xYourSmartContractAddress")
+LABEL_CONTRACT_ADDRESS = os.getenv("LABEL_CONTRACT_ADDRESS", "0xYourLabelContractAddress")
 
 # TEE Service settings
 TEE_SERVICE_URL = os.getenv("TEE_SERVICE_URL", "http://localhost:8001/tee")

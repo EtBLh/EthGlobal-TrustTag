@@ -1,9 +1,26 @@
+import os
+import json
 import asyncio
 import logging
 from app.models import TEEOutput
-from app.config import BLOCKCHAIN_RPC_URL, SMART_CONTRACT_ADDRESS
+from app.config import BLOCKCHAIN_RPC_URL, VOTE_CONTRACT_ADDRESS, LABEL_CONTRACT_ADDRESS
+from web3 import Web3
 
 logger = logging.getLogger(__name__)
+
+# Load lcoal ABI generated from the smart contract
+with open(os.path.join(os.path.dirname(__file__), '../contracts/CommitRevealLabelVoting.json'), 'r') as f:
+    vote_contract_abi = json.load(f)
+
+with open(os.path.join(os.path.dirname(__file__), '../../blockchain/TrustTag-contract/out/TrustTagLabelStorage.sol/LabelStorage.json'), 'r') as f:
+    label_contract_abi = json.load(f)
+
+# Initialize web3 connection
+w3 = Web3(Web3.HTTPProvider(BLOCKCHAIN_RPC_URL))
+
+# Initialize contract
+vote_contract = w3.eth.contract(address=Web3.to_checksum_address(VOTE_CONTRACT_ADDRESS), abi=vote_contract_abi)
+label_contract = w3.eth.contract(address=Web3.to_checksum_address(LABEL_CONTRACT_ADDRESS), abi=label_contract_abi)
 
 async def update_vote(tee_output: TEEOutput):
     """
