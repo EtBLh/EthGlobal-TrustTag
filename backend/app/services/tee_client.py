@@ -42,7 +42,7 @@ class TeeClient:
             Example: [{"address": "0xRewardAddress1", "score": 10}, {"address": "0xRewardAddress2", "score": 5}]
         """
         # Retrieve votes for the given proposal from the database.
-        db = await get_database()
+        db = get_database()
         votes = await db["votes"].find({
             "proposal_id": proposal_id,
             "address": {"$in": voters}
