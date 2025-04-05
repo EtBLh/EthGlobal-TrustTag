@@ -76,7 +76,7 @@ class TeeClient:
             "address": {"$in": voters}
         })
         votes = await votes_cursor.to_list(None)
-
+        logger.info(f"Retrieved {len(votes)} votes for proposal {proposal_id}")
         if not votes:
             logger.info(f"No votes found for proposal {proposal_id} among {voters}.")
             return []
