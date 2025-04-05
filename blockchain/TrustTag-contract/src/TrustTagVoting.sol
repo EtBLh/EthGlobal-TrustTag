@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IProtocolToken {
     function transfer(address to, uint256 amount) external returns (bool);
@@ -12,7 +13,7 @@ interface ITagStorage {
     function updateLabel(bytes32 hashedAddress, string calldata description, bool malicious) external;
 }
 
-contract CommitRevealLabelVoting is Ownable {
+contract TrustTagVoting is Ownable {
     enum Phase { Commit, Reveal, Finished }
 
     struct VoterCommit {
@@ -40,7 +41,7 @@ contract CommitRevealLabelVoting is Ownable {
         bool winningLabel;                       // 最終標註結果
     }
 
-    IProtocolToken public token;
+    IERC20 public token;
     ITagStorage public tagStorage;
     mapping(string => Proposal) public proposals;      // 依照提案 ID 存放每個提案的詳細資訊
     mapping(address => uint256) public stakes;          // 記錄每個使用者目前已 stake 但尚未參與投票的餘額，可被用來再次投票或提案。
@@ -50,7 +51,7 @@ contract CommitRevealLabelVoting is Ownable {
     uint256 public constant STAKE_TO_VOTE = 20 ether;
     uint256 public constant SLASH_FAILED_PROPOSAL = 300 ether;
     uint256 public constant SLASH_UNREVEALED = 10 ether;
-    uint256 public constant MIN_VOTE_COUNT = 30;
+    uint256 public constant MIN_VOTE_COUNT = 3;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
@@ -61,7 +62,7 @@ contract CommitRevealLabelVoting is Ownable {
     event RewardClaimed(string proposalId, address voter, uint256 amount);
 
     constructor(address _token, address _tagStorage, address initialOwner) Ownable(initialOwner) {
-        token = IProtocolToken(_token);
+        token = IERC20(_token);
         tagStorage = ITagStorage(_tagStorage);
     }
 

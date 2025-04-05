@@ -11,7 +11,7 @@ contract DeployLabelStorage is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        TagStorage labelStorage = new TagStorage(vm.addr(deployerPrivateKey), tokenAddress);
+        TrustTagStorage labelStorage = new TrustTagStorage(vm.addr(deployerPrivateKey), tokenAddress);
 
         vm.stopBroadcast();
 
