@@ -45,7 +45,6 @@ contract CommitRevealLabelVoting is Ownable {
     uint256 public constant STAKE_TO_PROPOSE = 300 ether;
     uint256 public constant STAKE_TO_VOTE = 20 ether;
     uint256 public constant SLASH_FAILED_PROPOSAL = 300 ether;
-    uint256 public constant SLASH_WRONG_VOTE = 20 ether;
     uint256 public constant SLASH_UNREVEALED = 10 ether;
     uint256 public constant PROPOSAL_DURATION = 3 days;
 
@@ -142,11 +141,12 @@ contract CommitRevealLabelVoting is Ownable {
         emit VoteRevealed(proposalId, msg.sender, vote, prediction);
     }
 
-    function finalize(uint256 proposalId) external onlyOwner {
+    function finalize(uint256 proposalId, address[] calldata voterList, uint256[] calldata rewardList) external onlyOwner {
         Proposal storage p = proposals[proposalId];
         require(p.phase == Phase.Reveal, "Not in reveal phase");
         require(!p.finalized, "Already finalized");
         require(block.timestamp >= p.deadline, "Reveal phase not ended");
+        require(voterList.length == rewardList.length, "Length mismatch");
 
         bool winner = p.voteTally[true] >= p.voteTally[false];
         p.winningLabel = winner;
@@ -154,20 +154,29 @@ contract CommitRevealLabelVoting is Ownable {
         p.finalized = true;
         p.malicious = winner;
 
-        for (uint i = 0; i < p.voters.length; i++) {
-            address voter = p.voters[i];
+        for (uint i = 0; i < voterList.length; i++) {
+            address voter = voterList[i];
+            uint256 reward = rewardList[i];
             VoterCommit storage c = p.commits[voter];
 
             if (!c.revealed) {
+                stakes[voter] = stakes[voter] + c.stake - SLASH_UNREVEALED;
                 c.reward = 0;
-                continue;
             }
+            else if (c.voteOption != winner) {
+                c.reward = 0;
+            }
+            else {
+                c.reward = reward;
+                stakes[voter] += c.stake;
+            }
+        }
 
-            if (c.voteOption == winner) {
-                c.reward = c.stake + 10 ether; // 可自訂為 BTS 計算後金額
-            } else {
-                c.reward = 0;
-            }
+        if (p.voteTally[true] == 0 && p.voteTally[false] == 0) {
+            // 沒人 reveal 的話，提案者被懲罰
+            // stake 已扣，這邊不返還
+        } else {
+            stakes[p.proposer] += STAKE_TO_PROPOSE;
         }
 
         emit ProposalFinalized(proposalId, winner);
