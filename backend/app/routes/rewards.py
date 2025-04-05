@@ -12,12 +12,10 @@ router = APIRouter(prefix="/api", tags=["rewards"])
 
 class RewardsQuery(BaseModel):
     address: str
-    verifyPayload: dict   # already verified by middleware
 
 
 class ClaimRequest(BaseModel):
     address: str
-    verifyPayload: dict   # already verified by middleware
 
 
 class RewardsListResponse(BaseModel):
@@ -25,8 +23,8 @@ class RewardsListResponse(BaseModel):
 
 
 @router.post("/rewards", response_model=RewardsListResponse)
-async def get_rewards(q: RewardsQuery, db=Depends(get_database)):
-    docs = await db["rewards"].find({"address": q.address}).to_list(length=100)
+async def get_rewards(req: RewardsQuery, db=Depends(get_database)):
+    docs = await db["rewards"].find({"address": req.address}).to_list(length=100)
     return RewardsListResponse(list=docs)
 
 
