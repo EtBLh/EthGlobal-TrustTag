@@ -17,5 +17,5 @@ WORLDCOIN_APP_ID = os.getenv("WORLDCOIN_APP_ID", "app_fe9854eb1759ee4b1bd45aa9ca
 TEE_SERVICE_URL = os.getenv("TEE_SERVICE_URL", "http://localhost:8001/tee")
 
 # MongoDB settings
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "trustag")
+MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+DATABASE_NAME = os.getenv("MONGODB_DB_NAME", "trustag")

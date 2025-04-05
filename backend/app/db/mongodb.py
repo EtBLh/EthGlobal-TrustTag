@@ -3,9 +3,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.database import Database
 import os
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "votes_db")
+from app.config import MONGO_URI, DATABASE_NAME
 
 _client: AsyncIOMotorClient | None = None
 
