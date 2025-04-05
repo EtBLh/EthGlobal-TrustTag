@@ -9,6 +9,7 @@ from app.routes.propose import router as propose_router
 from app.routes.vote import router as vote_router
 from app.routes.rewards import router as rewards_router
 from app.routes.scheduler import router as scheduler_router
+from app.routes.world import router as world_router
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -62,3 +63,4 @@ app.include_router(propose_router)
 app.include_router(vote_router)
 app.include_router(rewards_router)
 app.include_router(scheduler_router)
+app.include_router(world_router)
