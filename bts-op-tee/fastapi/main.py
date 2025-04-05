@@ -25,6 +25,8 @@ def upload_json(file: UploadFile = File(...), filename: str = Form(...)):
     try:
         with open(file_path, "wb") as f:
             content = file.file.read()
+            # 移掉所有的空白
+            content = b"".join(content.split())
             f.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
