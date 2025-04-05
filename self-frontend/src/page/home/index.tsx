@@ -31,7 +31,7 @@ export default function IndexPage() {
       },
       method: 'POST',
       body: JSON.stringify({
-        address: MiniKit.walletAddress ?? '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700'
+        address: '0x216e555e9a928Cc9f7bD19d9b948C907087Ed700'
       })
     })
       .then(res => res.json())

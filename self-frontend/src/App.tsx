@@ -8,26 +8,31 @@ import VerifyPage from "./verify";
 import PageWrapper from "./components/page-wrapper";
 import { AnimatePresence } from "framer-motion";
 import ClaimPage from "./page/claim";
+import { AddressProvider } from "./AddressContext";
 
 export function AnimatedRoutes() {
   const location = useLocation()
   return (
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          <Route index element={<SplashScreen />} />
-          <Route path='/home' element={<PageWrapper variant="ltr"><HomePage /></PageWrapper>} />
-          <Route path='/verify' element={<PageWrapper variant="ltr"><VerifyPage /></PageWrapper>} />
-          <Route path='/vote' element={<PageWrapper variant="ltr"><VotePage /></PageWrapper>} />
-          <Route path='/search' element={<PageWrapper variant="ltr"><SearchPage /></PageWrapper>} />
-          <Route path='/propose' element={<PageWrapper variant="ltr"><ProposePage /></PageWrapper>} />
-          <Route path='/claim' element={<PageWrapper variant="ltr"><ClaimPage /></PageWrapper>} />
-        </Routes>
-      </AnimatePresence>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route index element={<SplashScreen />} />
+        <Route path='/home' element={<PageWrapper variant="ltr"><HomePage /></PageWrapper>} />
+        <Route path='/verify' element={<PageWrapper variant="ltr"><VerifyPage /></PageWrapper>} />
+        <Route path='/vote' element={<PageWrapper variant="ltr"><VotePage /></PageWrapper>} />
+        <Route path='/search' element={<PageWrapper variant="ltr"><SearchPage /></PageWrapper>} />
+        <Route path='/propose' element={<PageWrapper variant="ltr"><ProposePage /></PageWrapper>} />
+        <Route path='/claim' element={<PageWrapper variant="ltr"><ClaimPage /></PageWrapper>} />
+      </Routes>
+    </AnimatePresence>
   )
 }
 
+
 export default function () {
-  return <HashRouter>
-      <AnimatedRoutes/>
-  </HashRouter>
+  return <AddressProvider>
+    <HashRouter>
+      <AnimatedRoutes />
+    </HashRouter>
+  </AddressProvider>
+
 }
