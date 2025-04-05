@@ -22,6 +22,8 @@ w3 = Web3(Web3.HTTPProvider(BLOCKCHAIN_RPC_URL))
 vote_contract = w3.eth.contract(address=Web3.to_checksum_address(VOTE_CONTRACT_ADDRESS), abi=vote_contract_abi)
 label_contract = w3.eth.contract(address=Web3.to_checksum_address(LABEL_CONTRACT_ADDRESS), abi=label_contract_abi)
 
+
+vote_contract.functions.getVoteById(1).call()
 async def update_vote(tee_output: TEEOutput):
     """
     Call the smart contract to update the vote with TEE output.
