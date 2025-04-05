@@ -8,9 +8,9 @@ from typing import List, Dict
 from app.config import TEE_SERVICE_URL
 from app.db.mongodb import get_database
 from app.config import TEE_CLIENT_URL
+from app.utils import get_logger
 
-logger = logging.getLogger(__name__)
-
+logger = get_logger(__name__)
 
 class TeeClient:
     @staticmethod
