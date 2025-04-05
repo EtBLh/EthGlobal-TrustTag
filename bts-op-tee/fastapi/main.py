@@ -55,10 +55,6 @@ def run_in_guest(command: str) -> str:
 class VoteRequest(BaseModel):
     json_file_name: str
 
-@app.post("/vote")
-def run_bts_voting(payload: VoteRequest):
-    json_file_name = payload.json_file_name
-
 # ====== API: 呼叫 BTS 計算並簽章 ======
 @app.post("/vote")
 def run_bts_voting(payload: VoteRequest):
